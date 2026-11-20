@@ -362,20 +362,51 @@ function setPerfPreset(name) {
 // Initial apply
 applyPerfSettings();
 
-// ── Outer Archipelago Shoals & Distant Reef Rocks ──
+// ── Outer Archipelago Shoals & Distant Reef Rocks (In Deep Ocean Only) ──
 const reefGroup = new THREE.Group();
 const reefMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9, flatShading: true });
-for (let i = 0; i < 28; i++) {
-  const angle = (i / 28) * Math.PI * 2 + Math.sin(i * 1.5) * 0.2;
-  const r = 50 + (i % 5) * 14 + Math.random() * 8;
+
+function isPointOnPlayableLand(x, z, night) {
+  if (night === 1) {
+    return Math.hypot(x, z) <= 44.0;
+  } else if (night === 2) {
+    if (Math.hypot(x, z) <= 32.0) return true;
+    if (Math.hypot(x - 70.0, z) <= 32.0) return true;
+    if (x >= 20.0 && x <= 50.0 && Math.abs(z) <= 6.0) return true;
+    return false;
+  } else if (night === 3) {
+    return Math.hypot(x, z) <= 48.0;
+  }
+  return false;
+}
+
+// Generate 28 reef rocks strictly in deep ocean outside island terrain
+let placedReefs = 0;
+let reefSeed = 0;
+while (placedReefs < 28 && reefSeed < 200) {
+  reefSeed++;
+  const angle = (reefSeed / 28) * Math.PI * 2 + Math.sin(reefSeed * 1.5) * 0.25;
+  const r = currentNight === 2
+    ? 58 + (reefSeed % 6) * 12 + ((reefSeed * 7) % 15)
+    : 52 + (reefSeed % 5) * 14 + ((reefSeed * 5) % 10);
+
+  const centerX = currentNight === 2 ? 35.0 : 0.0;
+  const rx = centerX + Math.cos(angle) * r;
+  const rz = Math.sin(angle) * r;
+
+  // Skip any rock that would spawn inside or near island territory
+  if (isPointOnPlayableLand(rx, rz, currentNight)) continue;
+
   const reefRock = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(2.5 + Math.random() * 3.5, 1),
+    new THREE.DodecahedronGeometry(2.5 + ((reefSeed % 5) * 0.6), 1),
     reefMat
   );
-  reefRock.position.set(Math.cos(angle) * r, -1.8 + Math.random() * 0.8, Math.sin(angle) * r);
-  reefRock.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
-  reefRock.scale.set(1.0, 1.2 + Math.random() * 0.5, 1.0);
+  reefRock.position.set(rx, -2.0 + ((reefSeed % 3) * 0.3), rz);
+  reefRock.rotation.set(((reefSeed * 0.7) % 3), ((reefSeed * 1.3) % 3), ((reefSeed * 0.5) % 3));
+  reefRock.scale.set(1.0, 1.2, 1.0);
+  reefRock.receiveShadow = true;
   reefGroup.add(reefRock);
+  placedReefs++;
 }
 scene.add(reefGroup);
 

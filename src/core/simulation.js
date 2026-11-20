@@ -541,6 +541,9 @@ export class Simulation {
         vz += Math.sin(wRad) * 2.0;
       }
 
+      const prevX = this.player.pos[0];
+      const prevZ = this.player.pos[2];
+
       this.player.pos[0] = round3(this.player.pos[0] + vx * this.dt);
       this.player.pos[2] = round3(this.player.pos[2] + vz * this.dt);
       this.player.vel[0] = round3(vx);
@@ -564,7 +567,12 @@ export class Simulation {
       // 3.4 Kiểm tra độ cao mặt đất & Grounded
       const groundY = this.getGroundHeight(this.player.pos[0], this.player.pos[2]);
       if (this.player.dash_ticks_left <= 0) {
-        if (this.player.pos[1] <= groundY) {
+        // Chặn leo tường vách đứng: nếu độ cao mặt đất đột ngột cao hơn người chơi > 0.6m,
+        // đây là vách đá/tường thành, không cho đi bộ xuyên lên đỉnh mà giữ ở chân vách.
+        if (this.player.grounded && groundY > this.player.pos[1] + 0.6) {
+          this.player.pos[0] = prevX;
+          this.player.pos[2] = prevZ;
+        } else if (this.player.pos[1] <= groundY) {
           this.player.pos[1] = groundY;
           this.player.vel[1] = 0.0;
           this.player.grounded = true;
@@ -1322,7 +1330,39 @@ export class Simulation {
   }
 
   resolveObstacleCollision(pos, radius = 0.45) {
-    if (!this.obstacles_enabled || !this.obstacles) return;
+    if (!this.obstacles_enabled) return;
+
+    // ── Night 3 Stepped Mountain Circular Cliff Walls Collision ──
+    if (this.night === 3) {
+      const rCenter = Math.hypot(pos[0], pos[2]);
+
+      // 1. Tier 2 Circular Cliff Wall (R = 8.0m, wall from Y=3.0 to Y=6.0)
+      // When below Tier 2 summit (pos[1] < 5.8), player cannot penetrate into Tier 2 mesa
+      const minTier2R = 8.0 + radius;
+      if (pos[1] < 5.8 && rCenter < minTier2R) {
+        if (rCenter < 0.001) {
+          pos[0] = minTier2R;
+          pos[2] = 0.0;
+        } else {
+          pos[0] = round3((pos[0] / rCenter) * minTier2R);
+          pos[2] = round3((pos[2] / rCenter) * minTier2R);
+        }
+      }
+
+      // 2. Tier 1 Circular Cliff Wall (R = 24.0m, wall from Y=0.0 to Y=3.0)
+      // When on Tier 0 (pos[1] < 2.8), player cannot walk through Tier 1 cliff outside ramps
+      const minTier1R = 24.0 + radius;
+      if (pos[1] < 2.8 && rCenter < minTier1R) {
+        const deg = ((Math.atan2(pos[2], pos[0]) * 180) / Math.PI + 360) % 360;
+        const onRamp = Math.abs(deg - 30) <= 6.0 || Math.abs(deg - 150) <= 6.0 || Math.abs(deg - 210) <= 6.0 || Math.abs(deg - 330) <= 6.0;
+        if (!onRamp) {
+          pos[0] = round3((pos[0] / rCenter) * minTier1R);
+          pos[2] = round3((pos[2] / rCenter) * minTier1R);
+        }
+      }
+    }
+
+    if (!this.obstacles) return;
     for (const obs of this.obstacles) {
       const dXZ = distXZ(pos, obs.pos);
       const minD = radius + obs.radius;

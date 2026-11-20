@@ -456,6 +456,57 @@ test("Phase 2: Solid obstacle collision blocks movement and prevents pass-throug
   assert.equal(sim.player.pos[0] >= 0.5, true);
 });
 
+test("Phase 2: Night 2 solid rock on Island B blocks player movement", () => {
+  const sim = new Simulation({
+    night: 2,
+    obstacles_enabled: true,
+    scenario: {
+      player: { pos: [85.0, 0.0, -18.0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [
+        // Walk forward +Z towards b_rock3 at [85.0, 0.0, -15.0] (radius 1.4)
+        { tick: 0, move: [0, 1] }
+      ]
+    }
+  });
+
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+
+  // Player min Z distance must be clamped by obstacle radius 1.4 + player 0.45 = 1.85m -> Z <= -16.85
+  assert.equal(sim.player.pos[2] <= -16.8, true);
+});
+
+test("Phase 3: Night 3 Tier 2 circular wall blocks walking up from Tier 1 without jump pad", () => {
+  const sim = new Simulation({
+    night: 3,
+    obstacles_enabled: true,
+    scenario: {
+      player: { pos: [0.0, 3.0, 10.0], carried: 0, flames: 3 }, // on Tier 1 (Y=3.0)
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [
+        // Walk towards center (0, 0) where Tier 2 wall is at R=8.0
+        { tick: 0, move: [0, -1] }
+      ]
+    }
+  });
+
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+
+  // Player should be blocked at Tier 2 wall (R >= 8.4m) and remain at Y = 3.0 (NOT teleport to 6.0)
+  assert.equal(sim.player.pos[2] >= 8.4, true);
+  assert.equal(sim.player.pos[1], 3.0);
+});
+
 // ─────────────────────────────────────────────────────────────
 // PHẦN 2: Tính năng mới Phase 3 (TICKET-03: Change Request "Đèn cạn dầu")
 // ─────────────────────────────────────────────────────────────

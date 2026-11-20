@@ -175,11 +175,13 @@ export const MAP_CONFIGS = {
       // Island A
       { id: "a_rock1", type: "rock", pos: [10.0, 0.0, 10.0], radius: 1.2, height: 2.0 },
       { id: "a_rock2", type: "rock", pos: [-10.0, 0.0, 12.0], radius: 1.3, height: 2.2 },
+      { id: "a_rock3", type: "rock", pos: [-14.0, 0.0, -14.0], radius: 1.3, height: 2.2 },
       { id: "a_tree1", type: "tree", pos: [8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
       { id: "a_tree2", type: "tree", pos: [-8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
       // Island B
       { id: "b_rock1", type: "rock", pos: [65.0, 0.0, 10.0], radius: 1.2, height: 2.0 },
       { id: "b_rock2", type: "rock", pos: [80.0, 0.0, 12.0], radius: 1.3, height: 2.2 },
+      { id: "b_rock3", type: "rock", pos: [85.0, 0.0, -15.0], radius: 1.4, height: 2.2 },
       { id: "b_tree1", type: "tree", pos: [63.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
       { id: "b_tree2", type: "tree", pos: [78.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
       // Bridge Pillars
