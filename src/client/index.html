@@ -278,6 +278,152 @@
     .key-btn-bind.listening { background: #ff5e57; color: #fff; animation: pulse-warn 0.6s infinite; }
     .key-btn-bind.conflict { border-color: #ff5e57; color: #ff5e57; }
     #ctrl-conflict-msg { color: #ff5e57; font-size: 12px; margin-top: 8px; min-height: 18px; }
+
+    /* ── Home / Main Menu Screen Overlay ── */
+    #home-screen {
+      position: absolute; inset: 0; z-index: 50; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(circle at center, rgba(6, 12, 32, 0.65) 0%, rgba(2, 5, 16, 0.92) 100%);
+      backdrop-filter: blur(8px); color: #fff; user-select: none;
+      transition: opacity 0.3s ease;
+    }
+    .home-content {
+      width: 92%; max-width: 980px; max-height: 90vh; display: flex;
+      flex-direction: column; align-items: center; gap: 18px;
+      overflow-y: auto; padding: 20px 10px; scrollbar-width: thin;
+    }
+    .home-header { text-align: center; }
+    .home-tagline {
+      font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #4bcffa;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .home-title {
+      font-size: 42px; font-weight: 800; letter-spacing: 3px;
+      background: linear-gradient(135deg, #fff 15%, #ffd32a 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(255, 211, 42, 0.35);
+      margin: 0;
+    }
+    .home-subtitle { font-size: 14px; color: #8e9bb2; margin-top: 4px; font-weight: 500; }
+
+    /* Home Navigation Tabs */
+    .home-nav {
+      display: flex; gap: 8px; background: rgba(255, 255, 255, 0.05);
+      padding: 6px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3); flex-wrap: wrap; justify-content: center;
+    }
+    .home-nav-btn {
+      padding: 9px 18px; border-radius: 8px; border: none; background: transparent;
+      color: #9ba7bf; font-weight: 600; font-size: 13px; cursor: pointer;
+      transition: all 0.2s ease; display: flex; align-items: center; gap: 8px;
+    }
+    .home-nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+    .home-nav-btn.active {
+      color: #030610; background: linear-gradient(135deg, #ffd32a, #f6b93b);
+      font-weight: 700; box-shadow: 0 2px 12px rgba(255, 211, 42, 0.35);
+    }
+
+    /* Panels */
+    .home-tab-panel { width: 100%; display: none; }
+    .home-tab-panel.active { display: block; }
+
+    /* Nights Grid */
+    .nights-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px; width: 100%;
+    }
+    .night-card {
+      background: linear-gradient(160deg, rgba(16, 26, 58, 0.85), rgba(8, 14, 32, 0.95));
+      border: 1px solid rgba(100, 140, 255, 0.2); border-radius: 16px;
+      padding: 24px 20px; display: flex; flex-direction: column; position: relative;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+    .night-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255, 211, 42, 0.5);
+      box-shadow: 0 12px 35px rgba(255, 211, 42, 0.2);
+    }
+    .night-card-badge {
+      position: absolute; top: 16px; right: 16px; font-size: 10px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px; background: rgba(75, 207, 250, 0.15);
+      color: #4bcffa; border: 1px solid rgba(75, 207, 250, 0.3); letter-spacing: 0.5px;
+    }
+    .night-card-badge.gold {
+      background: rgba(255, 211, 42, 0.15); color: #ffd32a; border-color: rgba(255, 211, 42, 0.4);
+    }
+    .night-card-badge.red {
+      background: rgba(255, 94, 87, 0.15); color: #ff5e57; border-color: rgba(255, 94, 87, 0.4);
+    }
+    .night-card-icon { font-size: 34px; margin-bottom: 10px; }
+    .night-card-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .night-card-desc { font-size: 12px; color: #8e9bb2; line-height: 1.5; margin-bottom: 16px; flex: 1; }
+    .night-card-stats {
+      display: flex; gap: 12px; font-size: 11px; font-weight: 600; color: #ffd32a;
+      margin-bottom: 18px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .btn-play-night {
+      width: 100%; padding: 12px; border-radius: 10px; border: none;
+      background: linear-gradient(135deg, #0be881, #05c46b); color: #051d10;
+      font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(11, 232, 129, 0.25);
+    }
+    .btn-play-night:hover {
+      background: linear-gradient(135deg, #2ecc71, #0be881);
+      box-shadow: 0 6px 20px rgba(11, 232, 129, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Settings Grid & Presets */
+    .settings-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 16px; width: 100%;
+    }
+    .settings-card {
+      background: rgba(14, 22, 52, 0.85); border: 1px solid rgba(100, 140, 255, 0.18);
+      border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .settings-card-title {
+      font-size: 14px; font-weight: 700; color: #ffd32a; display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 8px;
+    }
+    .preset-btns { display: flex; gap: 6px; }
+    .preset-btn {
+      flex: 1; padding: 8px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.06); color: #9ba7bf; font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .preset-btn:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+    .preset-btn.active {
+      background: rgba(11, 232, 129, 0.2); border-color: #0be881; color: #0be881; font-weight: 700;
+      box-shadow: 0 0 12px rgba(11, 232, 129, 0.25);
+    }
+    .setting-toggle-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; color: #c8d0de; padding: 4px 0;
+    }
+    .setting-toggle-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .setting-switch {
+      appearance: none; width: 34px; height: 18px; background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px; position: relative; cursor: pointer; outline: none; transition: 0.2s;
+    }
+    .setting-switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+      background: #fff; border-radius: 50%; transition: 0.2s;
+    }
+    .setting-switch:checked { background: #0be881; }
+    .setting-switch:checked::after { transform: translateX(16px); }
+
+    /* Guide Grid */
+    .guide-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px; width: 100%;
+    }
+    .guide-item {
+      background: rgba(14, 22, 52, 0.7); border: 1px solid rgba(100, 140, 255, 0.15);
+      border-radius: 12px; padding: 14px; font-size: 12px; line-height: 1.5; color: #a4b0be;
+    }
+    .guide-item strong { color: #ffd32a; font-size: 13px; display: block; margin-bottom: 4px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -285,8 +431,197 @@
   <div id="canvas-container"></div>
   <div id="edge-indicators"></div>
 
+  <!-- ── Home / Main Menu Screen Overlay ── -->
+  <div id="home-screen">
+    <div class="home-content">
+      <div class="home-header">
+        <div class="home-tagline">TRÒ CHƠI HÀNH ĐỘNG SINH TỒN 3D VIỆT NAM</div>
+        <h1 class="home-title">🏮 ĐẢO ĐÈN LỒNG</h1>
+        <p class="home-subtitle">Bình Minh v1.0.0 — Giữ đảo sáng tới bình minh</p>
+      </div>
+
+      <!-- Main Navigation Bar -->
+      <div class="home-nav">
+        <button class="home-nav-btn active" id="tab-btn-nights">🎮 Chọn Bàn Chơi</button>
+        <button class="home-nav-btn" id="tab-btn-lb">🏆 Bảng Xếp Hạng</button>
+        <button class="home-nav-btn" id="tab-btn-settings">⚙ Cài Đặt &amp; Tối Ưu FPS</button>
+        <button class="home-nav-btn" id="tab-btn-guide">📜 Hướng Dẫn</button>
+      </div>
+
+      <!-- Tab 1: Night Selector Cards -->
+      <div class="home-tab-panel active" id="panel-nights">
+        <div class="nights-grid">
+          <!-- Đêm 1 Card -->
+          <div class="night-card" data-night="1">
+            <div class="night-card-badge">CƠ BẢN</div>
+            <div class="night-card-icon">🏮</div>
+            <h3 class="night-card-title">Đêm 1: Đảo Bến</h3>
+            <p class="night-card-desc">Làm quen với hòn đảo đơn sơ, thu thập đom đóm thắp sáng 3 ngọn đèn cổ trước sự truy đuổi của Bóng Mực.</p>
+            <div class="night-card-stats">
+              <span>🏮 3 Đèn lồng</span>
+              <span>⏱ 5:00 phút</span>
+              <span>⭐ Dễ</span>
+            </div>
+            <button class="btn-play-night" onclick="launchGame(1)">▶ Vào Chơi Đêm 1</button>
+          </div>
+
+          <!-- Đêm 2 Card -->
+          <div class="night-card" data-night="2">
+            <div class="night-card-badge gold">NÂNG CAO</div>
+            <div class="night-card-icon">⚡</div>
+            <h3 class="night-card-title">Đêm 2: Đảo Cau</h3>
+            <p class="night-card-desc">Đảo đôi đối xứng nối bằng Đệm Nhảy khí động học. Nhặt Bùa hộ mệnh để tăng tốc &amp; lướt liên tục!</p>
+            <div class="night-card-stats">
+              <span>🏮 4 Đèn lồng</span>
+              <span>⚡ Đệm Nhảy</span>
+              <span>⭐⭐ Trung Bình</span>
+            </div>
+            <button class="btn-play-night" onclick="launchGame(2)">▶ Vào Chơi Đêm 2</button>
+          </div>
+
+          <!-- Đêm 3 Card -->
+          <div class="night-card" data-night="3">
+            <div class="night-card-badge red">THỬ THÁCH</div>
+            <div class="night-card-icon">💨</div>
+            <h3 class="night-card-title">Đêm 3: Đảo Chuông</h3>
+            <p class="night-card-desc">Đảo tròn khổng lồ với 5 ngọn đèn lồng. Gió bão thổi trôi 2 m/s và Bóng Mực di chuyển nhanh hơn (4.5 m/s).</p>
+            <div class="night-card-stats">
+              <span>🏮 5 Đèn lồng</span>
+              <span>💨 Gió 2 m/s</span>
+              <span>⭐⭐⭐ Cao</span>
+            </div>
+            <button class="btn-play-night" onclick="launchGame(3)">▶ Vào Chơi Đêm 3</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Leaderboard Panel -->
+      <div class="home-tab-panel" id="panel-lb">
+        <div class="settings-card" style="width:100%;">
+          <div class="settings-card-title">
+            <span>🏆 BẢNG XẾP HẠNG TOP 10 CAO THỦ</span>
+            <div style="display:flex;gap:6px;">
+              <button class="preset-btn active" id="lb-filter-all">Tất cả</button>
+              <button class="preset-btn" id="lb-filter-1">Đêm 1</button>
+              <button class="preset-btn" id="lb-filter-2">Đêm 2</button>
+              <button class="preset-btn" id="lb-filter-3">Đêm 3</button>
+            </div>
+          </div>
+          <table class="lb-table">
+            <thead>
+              <tr>
+                <th>Hạng</th>
+                <th>Tên</th>
+                <th>Điểm số</th>
+                <th>Đêm Thắng</th>
+                <th>Thời Gian</th>
+              </tr>
+            </thead>
+            <tbody id="home-lb-body">
+              <tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Đang tải dữ liệu...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Unified Settings & FPS Optimization Panel -->
+      <div class="home-tab-panel" id="panel-settings">
+        <div class="settings-grid">
+          <!-- Graphics & FPS UX -->
+          <div class="settings-card">
+            <div class="settings-card-title">⚡ Đồ Họa &amp; Tối Ưu FPS</div>
+            <div>
+              <div style="font-size:11px;color:#8e9bb2;margin-bottom:6px;">CẤU HÌNH NHANH (PRESETS):</div>
+              <div class="preset-btns">
+                <button class="preset-btn" id="preset-fps">⚡ Tối ưu FPS</button>
+                <button class="preset-btn active" id="preset-balanced">⚖ Cân bằng</button>
+                <button class="preset-btn" id="preset-cinematic">✨ Đồ họa cao</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:#8e9bb2;margin-top:6px;">TÙY CHỈNH CHI TIẾT:</div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-shadows" class="setting-switch" checked> Đổ bóng động (Shadows)</label>
+            </div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-waves" class="setting-switch" checked> Sóng biển chuyển động (Ocean Waves)</label>
+            </div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-lanterns" class="setting-switch" checked> Đèn lồng bay nền (Sky Lanterns)</label>
+            </div>
+            <div class="setting-toggle-row">
+              <span>Độ phân giải hiển thị:</span>
+              <span id="pr-label" style="font-weight:700;color:#ffd32a;">1.25x</span>
+            </div>
+          </div>
+
+          <!-- Controls & Audio -->
+          <div class="settings-card">
+            <div class="settings-card-title">⌨ Phím &amp; Âm Thanh</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:#c8d0de;">Đổi phím điều khiển:</span>
+              <button id="btn-home-open-keys" class="key btn-action" style="padding:6px 12px;color:#ffd32a;">Gán lại phím</button>
+            </div>
+            <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;">
+              <div style="font-size:11px;color:#8e9bb2;margin-bottom:6px;">ÂM THANH:</div>
+              <div class="setting-toggle-row">
+                <span>Âm lượng hiệu ứng:</span>
+                <span id="vol-label" style="font-weight:700;color:#ffd32a;">70%</span>
+              </div>
+              <input type="range" id="vol-slider" min="0" max="100" value="70" style="width:100%;accent-color:#ffd32a;cursor:pointer;">
+            </div>
+          </div>
+
+          <!-- Accessibility -->
+          <div class="settings-card">
+            <div class="settings-card-title">👁 Trợ Năng (Accessibility)</div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-cb" class="setting-switch"> Hỗ trợ mù màu (Colorblind Mode)</label>
+            </div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-font" class="setting-switch"> Cỡ chữ giao diện lớn (≥ 18px)</label>
+            </div>
+            <div class="setting-toggle-row">
+              <label><input type="checkbox" id="toggle-motion" class="setting-switch"> Giảm rung lắc chuyển động</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Guide Panel -->
+      <div class="home-tab-panel" id="panel-guide">
+        <div class="guide-grid">
+          <div class="guide-item">
+            <strong>🏮 Thắp Đèn &amp; Giữ Lửa</strong>
+            Thu thập đom đóm rải rác trên đảo (tối đa mang 10 con). Đứng gần đèn lồng và bấm [E] để nạp. Đèn cần 10 đom đóm để thắp sáng lần đầu (chỉ cần 5 nếu thắp lại).
+          </div>
+          <div class="guide-item">
+            <strong>⏳ Đèn Cạn Dầu &amp; Châm Dầu</strong>
+            Đèn đang sáng tự hao 1.0 dầu/giây (bắt đầu từ 100). Bấm [E] ở đèn để châm thêm dầu. Nếu cạn dầu về 0, đèn sẽ tắt và mất vùng an toàn!
+          </div>
+          <div class="guide-item">
+            <strong>👻 Bóng Mực &amp; Hút Dầu</strong>
+            Bóng Mực lảng vảng sẽ nhắm tới các đèn có nhiên liệu &lt; 30 và hút 5 dầu/giây. Giữ khoảng cách và không để chúng chạm vào Mây (mất 1 ngọn lửa sinh lực).
+          </div>
+          <div class="guide-item">
+            <strong>✨ Tỏa Sáng &amp; Lướt Nhanh</strong>
+            Dùng 3 đom đóm bấm [Q] để Tỏa Sáng làm choáng và đẩy lùi Bóng Mực 4m! Bấm [Shift] để lướt nhanh 14 m/s né tránh hiểm nguy.
+          </div>
+          <div class="guide-item">
+            <strong>⚡ Bùa Hộ Mệnh &amp; Đệm Nhảy (Đêm 2)</strong>
+            Nhặt Bùa hộ mệnh ở Đêm 2 để tăng tốc độ lên 7.2 m/s và lướt không tốn hồi chiêu! Bước lên Đệm Nhảy vàng để phóng vút sang đảo đối diện.
+          </div>
+          <div class="guide-item">
+            <strong>🌅 Điều Kiện Thắng</strong>
+            Sống sót kiên cường tới bình minh (hết 300 giây) với ít nhất 60% tổng số đèn lồng trên đảo vẫn đang sáng rực!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Night Selector: Top Center -->
   <div id="night-bar">
+    <button class="night-btn" id="btn-bar-home" style="color:#4bcffa;border-color:rgba(75,207,250,0.3);" onclick="returnToHome()">🏠 Trang Chủ</button>
     <button class="night-btn active" id="btn-night-1" onclick="switchNight(1)">Đêm 1: Đảo Bến</button>
     <button class="night-btn" id="btn-night-2" onclick="switchNight(2)">Đêm 2: Đảo Cau</button>
     <button class="night-btn" id="btn-night-3" onclick="switchNight(3)">Đêm 3: Đảo Chuông</button>
@@ -353,7 +688,11 @@
 
   <!-- Instructions & Accessibility Toolbar: bottom-center -->
   <div id="instructions">
+    <div id="btn-inst-home" class="key btn-action" title="Quay về Trang chủ" onclick="returnToHome()">🏠 Trang chủ</div>
+    <div class="sep"></div>
     <div class="key-group"><span class="key">🖱 Chuột</span> Xoay camera</div>
+    <div class="sep"></div>
+    <div id="btn-open-settings" class="key btn-action" title="Cài đặt game &amp; Tối ưu FPS">⚙ Cài đặt</div>
     <div class="sep"></div>
     <div id="btn-open-controls" class="key btn-action" title="Cài đặt đổi phím điều khiển">⌨ Phím</div>
     <div class="sep"></div>
@@ -414,7 +753,13 @@
   <!-- Pause Overlay -->
   <div id="pause-overlay">
     <div id="pause-title">TẠM DỪNG</div>
-    <div id="pause-hint">Nhấn [P] hoặc [ESC] để tiếp tục cuộc hành trình</div>
+    <div id="pause-hint">Trò chơi đang dừng. Bạn có thể thay đổi thiết lập hoặc tiếp tục cuộc hành trình.</div>
+    <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;justify-content:center;">
+      <button class="modal-close-btn" id="btn-pause-resume" style="float:none;margin-top:0;background:#0be881;color:#030610;">▶ Tiếp Tục</button>
+      <button class="modal-close-btn" id="btn-pause-settings" style="float:none;margin-top:0;background:#ffd32a;color:#030610;">⚙ Cài Đặt &amp; FPS</button>
+      <button class="modal-close-btn" id="btn-pause-restart" style="float:none;margin-top:0;background:#ff9f43;color:#030610;" onclick="location.reload()">🔄 Chơi Lại</button>
+      <button class="modal-close-btn" id="btn-pause-home" style="float:none;margin-top:0;background:#4bcffa;color:#030610;" onclick="returnToHome()">🏠 Về Trang Chủ</button>
+    </div>
   </div>
 
   <!-- Game Over Modal -->
@@ -429,7 +774,10 @@
       </div>
       <div id="lb-submit-msg"></div>
     </div>
-    <button class="btn-restart" onclick="location.reload()">Chơi Lại</button>
+    <div style="display:flex;gap:12px;margin-top:8px;">
+      <button class="btn-restart" onclick="location.reload()">🔄 Chơi Lại</button>
+      <button class="btn-restart" id="btn-gameover-home" style="background:#4bcffa;color:#030610;box-shadow:0 4px 20px rgba(75,207,250,0.3);" onclick="returnToHome()">🏠 Về Trang Chủ</button>
+    </div>
   </div>
 
   <script type="module" src="game.js"></script>

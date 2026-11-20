@@ -1,9 +1,10 @@
 import { Simulation } from "/core/simulation.js";
 
-// ── Read Night from URL param (?night=1|2|3) ──
+// ── Read Night & Play Mode from URL param (?night=1|2|3&play=1) ──
 const urlParams = new URLSearchParams(window.location.search);
 let currentNight = parseInt(urlParams.get("night") || "1", 10);
 if (![1, 2, 3].includes(currentNight)) currentNight = 1;
+let inMenuMode = !urlParams.has("play");
 
 // ── Initialize Simulation with Obstacles Enabled for 3D Client ──
 const sim = new Simulation({
@@ -13,12 +14,66 @@ const sim = new Simulation({
 });
 
 // Update Night Bar active button
-document.querySelectorAll(".night-btn").forEach((btn, idx) => {
+document.querySelectorAll(".night-btn[id^='btn-night-']").forEach((btn, idx) => {
   btn.classList.toggle("active", idx + 1 === currentNight);
 });
 window.switchNight = function (n) {
-  window.location.search = `?night=${n}`;
+  window.location.search = `?night=${n}&play=1`;
 };
+
+window.launchGame = function (n) {
+  if (n !== currentNight) {
+    window.location.search = `?night=${n}&play=1`;
+  } else {
+    inMenuMode = false;
+    const homeEl = document.getElementById("home-screen");
+    if (homeEl) homeEl.style.display = "none";
+    const hudEl = document.getElementById("hud");
+    if (hudEl) hudEl.style.display = "block";
+    const barEl = document.getElementById("night-bar");
+    if (barEl) barEl.style.display = "flex";
+    const scoreEl = document.getElementById("score-panel");
+    if (scoreEl) scoreEl.style.display = "block";
+    const instEl = document.getElementById("instructions");
+    if (instEl) instEl.style.display = "flex";
+    if (sfx) sfx.init();
+  }
+};
+
+window.returnToHome = function () {
+  inMenuMode = true;
+  const homeEl = document.getElementById("home-screen");
+  if (homeEl) homeEl.style.display = "flex";
+  const hudEl = document.getElementById("hud");
+  if (hudEl) hudEl.style.display = "none";
+  const barEl = document.getElementById("night-bar");
+  if (barEl) barEl.style.display = "none";
+  const scoreEl = document.getElementById("score-panel");
+  if (scoreEl) scoreEl.style.display = "none";
+  const instEl = document.getElementById("instructions");
+  if (instEl) instEl.style.display = "none";
+  const pauseEl = document.getElementById("pause-overlay");
+  if (pauseEl) pauseEl.style.display = "none";
+  const overEl = document.getElementById("game-over-modal");
+  if (overEl) overEl.style.display = "none";
+  if (typeof fetchAndRenderHomeLeaderboard === "function") {
+    fetchAndRenderHomeLeaderboard("all");
+  }
+};
+
+// Initial view mode
+if (inMenuMode) {
+  const homeEl = document.getElementById("home-screen");
+  if (homeEl) homeEl.style.display = "flex";
+  const hudEl = document.getElementById("hud");
+  if (hudEl) hudEl.style.display = "none";
+  const barEl = document.getElementById("night-bar");
+  if (barEl) barEl.style.display = "none";
+  const scoreEl = document.getElementById("score-panel");
+  if (scoreEl) scoreEl.style.display = "none";
+  const instEl = document.getElementById("instructions");
+  if (instEl) instEl.style.display = "none";
+}
 
 const mapTitleEl = document.getElementById("map-title");
 const nightSubEl = document.getElementById("night-sub");
@@ -53,8 +108,9 @@ let prevPointerX = 0;
 let prevPointerY = 0;
 
 window.addEventListener("pointerdown", (e) => {
+  if (inMenuMode) return;
   // Ignore clicks on HUD, modals, or UI overlays
-  if (e.target.closest("#hud, #score-panel, #night-bar, #instructions, #subtitles-banner, #controls-modal, #leaderboard-modal, #game-over-modal, #proximity-hint")) {
+  if (e.target.closest("#home-screen, #hud, #score-panel, #night-bar, #instructions, #subtitles-banner, #controls-modal, #leaderboard-modal, #game-over-modal, #proximity-hint, #pause-overlay")) {
     return;
   }
   isDraggingCam = true;
@@ -92,6 +148,22 @@ const fpsMsEl = document.getElementById("fps-ms");
 const fpsDotEl = document.querySelector("#fps-badge .fps-dot");
 let fpsFrames = 0;
 let fpsLastCalc = performance.now();
+
+function updateFpsBadge(now) {
+  fpsFrames++;
+  if (now - fpsLastCalc >= 250) {
+    const elapsed = (now - fpsLastCalc) / 1000;
+    const currentFps = Math.round(fpsFrames / elapsed);
+    const frameMs = (1000 / Math.max(1, currentFps)).toFixed(1);
+    if (fpsNumEl) fpsNumEl.textContent = currentFps;
+    if (fpsMsEl) fpsMsEl.textContent = `(${frameMs}ms)`;
+    if (fpsDotEl) {
+      fpsDotEl.className = "fps-dot" + (currentFps < 30 ? " bad" : currentFps < 55 ? " warn" : "");
+    }
+    fpsFrames = 0;
+    fpsLastCalc = now;
+  }
+}
 
 // ── Lighting ──
 const ambientLight = new THREE.AmbientLight(0x1c2b50, 0.7);
@@ -173,6 +245,94 @@ for (let i = 0; i < 30; i++) {
   scene.add(sMesh);
   skyLanterns.push({ mesh: sMesh, speed: 0.2 + Math.random() * 0.3, initialY: sY });
 }
+
+// ── Graphics & Performance Manager (UX FPS Optimizer) ──
+const DEFAULT_PERF = {
+  preset: "balanced",
+  shadows: true,
+  shadowMapSize: 512,
+  pixelRatioLimit: 1.25,
+  waterWaves: true,
+  skyLanterns: true
+};
+
+let perfSettings = { ...DEFAULT_PERF };
+try {
+  const saved = localStorage.getItem("dao_den_long_perf");
+  if (saved) {
+    perfSettings = { ...DEFAULT_PERF, ...JSON.parse(saved) };
+  }
+} catch (e) {}
+
+function applyPerfSettings() {
+  const targetPR = Math.min(window.devicePixelRatio || 1, perfSettings.pixelRatioLimit);
+  renderer.setPixelRatio(targetPR);
+
+  renderer.shadowMap.enabled = perfSettings.shadows;
+  moonDir.castShadow = perfSettings.shadows;
+  if (perfSettings.shadows) {
+    moonDir.shadow.mapSize.set(perfSettings.shadowMapSize, perfSettings.shadowMapSize);
+    if (moonDir.shadow.map) {
+      moonDir.shadow.map.dispose();
+      moonDir.shadow.map = null;
+    }
+  }
+
+  for (const sl of skyLanterns) {
+    sl.mesh.visible = perfSettings.skyLanterns;
+  }
+
+  try {
+    localStorage.setItem("dao_den_long_perf", JSON.stringify(perfSettings));
+  } catch (e) {}
+
+  updatePerfUI();
+}
+
+function updatePerfUI() {
+  const toggleShadows = document.getElementById("toggle-shadows");
+  const toggleWaves = document.getElementById("toggle-waves");
+  const toggleLanterns = document.getElementById("toggle-lanterns");
+  const prLabel = document.getElementById("pr-label");
+
+  if (toggleShadows) toggleShadows.checked = perfSettings.shadows;
+  if (toggleWaves) toggleWaves.checked = perfSettings.waterWaves;
+  if (toggleLanterns) toggleLanterns.checked = perfSettings.skyLanterns;
+  if (prLabel) prLabel.textContent = `${perfSettings.pixelRatioLimit}x`;
+
+  const btnFps = document.getElementById("preset-fps");
+  const btnBalanced = document.getElementById("preset-balanced");
+  const btnCinematic = document.getElementById("preset-cinematic");
+  if (btnFps) btnFps.classList.toggle("active", perfSettings.preset === "fps");
+  if (btnBalanced) btnBalanced.classList.toggle("active", perfSettings.preset === "balanced");
+  if (btnCinematic) btnCinematic.classList.toggle("active", perfSettings.preset === "cinematic");
+}
+
+function setPerfPreset(name) {
+  perfSettings.preset = name;
+  if (name === "fps") {
+    perfSettings.shadows = false;
+    perfSettings.pixelRatioLimit = 1.0;
+    perfSettings.waterWaves = false;
+    perfSettings.skyLanterns = false;
+  } else if (name === "balanced") {
+    perfSettings.shadows = true;
+    perfSettings.shadowMapSize = 512;
+    perfSettings.pixelRatioLimit = 1.25;
+    perfSettings.waterWaves = true;
+    perfSettings.skyLanterns = true;
+  } else if (name === "cinematic") {
+    perfSettings.shadows = true;
+    perfSettings.shadowMapSize = 1024;
+    perfSettings.pixelRatioLimit = 2.0;
+    perfSettings.waterWaves = true;
+    perfSettings.skyLanterns = true;
+  }
+  applyPerfSettings();
+}
+
+// Initial apply
+applyPerfSettings();
 
 // ── Outer Archipelago Shoals & Distant Reef Rocks ──
 const reefGroup = new THREE.Group();
@@ -700,7 +860,8 @@ function getOrCreateDrifter(d) {
 class SoundFX {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    this.muted = localStorage.getItem("dao_den_long_muted") === "true";
+    this.volume = parseFloat(localStorage.getItem("dao_den_long_volume") || "0.7");
   }
   init() {
     if (!this.ctx) {
@@ -709,6 +870,12 @@ class SoundFX {
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
   }
+  setVolume(val) {
+    this.volume = Math.max(0, Math.min(1.0, val));
+    try {
+      localStorage.setItem("dao_den_long_volume", String(this.volume));
+    } catch (e) {}
+  }
   playPickup() {
     if (this.muted || !this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -716,7 +883,7 @@ class SoundFX {
     osc.type = "sine";
     osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(880, this.ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.12 * this.volume, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -730,7 +897,7 @@ class SoundFX {
     osc.type = "triangle";
     osc.frequency.setValueAtTime(440, this.ctx.currentTime);
     osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.1);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.15 * this.volume, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -744,7 +911,7 @@ class SoundFX {
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(150, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.3);
-    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.15 * this.volume, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -758,7 +925,7 @@ class SoundFX {
     osc.type = "sine";
     osc.frequency.setValueAtTime(300, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.1 * this.volume, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -772,7 +939,7 @@ class SoundFX {
     osc.type = "sine";
     osc.frequency.setValueAtTime(220, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.12);
-    gain.gain.setValueAtTime(0.09, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.09 * this.volume, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.16);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -951,6 +1118,208 @@ const playerNameInput = document.getElementById("player-name-input");
 const btnSaveScore = document.getElementById("btn-save-score");
 const lbSubmitMsg = document.getElementById("lb-submit-msg");
 
+// ── Home Screen Tabs ──
+const homeNavBtns = document.querySelectorAll(".home-nav-btn");
+const homePanels = document.querySelectorAll(".home-tab-panel");
+homeNavBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const targetId = btn.id.replace("tab-btn-", "panel-");
+    homeNavBtns.forEach((b) => b.classList.remove("active"));
+    homePanels.forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    const targetPanel = document.getElementById(targetId);
+    if (targetPanel) targetPanel.classList.add("active");
+
+    if (targetId === "panel-lb") {
+      fetchAndRenderHomeLeaderboard("all");
+    }
+  });
+});
+
+let cachedLeaderboardEntries = [];
+async function fetchAndRenderHomeLeaderboard(filterNight = "all") {
+  const tbody = document.getElementById("home-lb-body");
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Đang tải dữ liệu...</td></tr>';
+  try {
+    const res = await fetch("/api/leaderboard");
+    const data = await res.json();
+    cachedLeaderboardEntries = data.entries || [];
+    renderFilteredHomeLeaderboard(filterNight);
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ff5e57;padding:20px;">Không thể tải bảng xếp hạng từ máy chủ.</td></tr>';
+  }
+}
+
+function renderFilteredHomeLeaderboard(filterNight = "all") {
+  const tbody = document.getElementById("home-lb-body");
+  if (!tbody) return;
+  let list = cachedLeaderboardEntries;
+  if (filterNight !== "all") {
+    const nightNum = parseInt(filterNight, 10);
+    list = list.filter((e) => e.nights_won === nightNum);
+  }
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Chưa có dữ liệu bảng xếp hạng cho mục này.</td></tr>';
+    return;
+  }
+  let html = "";
+  list.slice(0, 10).forEach((e, idx) => {
+    const d = new Date(e.achieved_at);
+    const dateStr = `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    html += `<tr>
+      <td class="lb-rank">#${idx + 1}</td>
+      <td><strong>${e.name}</strong></td>
+      <td class="lb-score">${e.score}</td>
+      <td>Đêm ${e.nights_won}</td>
+      <td style="color:#7a89a4;font-size:11px;">${dateStr}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+["all", "1", "2", "3"].forEach((f) => {
+  const btn = document.getElementById(`lb-filter-${f}`);
+  if (btn) {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#panel-lb .preset-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      renderFilteredHomeLeaderboard(f);
+    });
+  }
+});
+
+// Preset buttons
+const btnPresetFps = document.getElementById("preset-fps");
+const btnPresetBalanced = document.getElementById("preset-balanced");
+const btnPresetCinematic = document.getElementById("preset-cinematic");
+if (btnPresetFps) btnPresetFps.addEventListener("click", () => setPerfPreset("fps"));
+if (btnPresetBalanced) btnPresetBalanced.addEventListener("click", () => setPerfPreset("balanced"));
+if (btnPresetCinematic) btnPresetCinematic.addEventListener("click", () => setPerfPreset("cinematic"));
+
+const toggleShadows = document.getElementById("toggle-shadows");
+if (toggleShadows) {
+  toggleShadows.addEventListener("change", (e) => {
+    perfSettings.shadows = e.target.checked;
+    perfSettings.preset = "custom";
+    applyPerfSettings();
+  });
+}
+const toggleWaves = document.getElementById("toggle-waves");
+if (toggleWaves) {
+  toggleWaves.addEventListener("change", (e) => {
+    perfSettings.waterWaves = e.target.checked;
+    perfSettings.preset = "custom";
+    applyPerfSettings();
+  });
+}
+const toggleLanterns = document.getElementById("toggle-lanterns");
+if (toggleLanterns) {
+  toggleLanterns.addEventListener("change", (e) => {
+    perfSettings.skyLanterns = e.target.checked;
+    perfSettings.preset = "custom";
+    applyPerfSettings();
+  });
+}
+
+// Volume slider
+const volSlider = document.getElementById("vol-slider");
+const volLabel = document.getElementById("vol-label");
+if (volSlider) {
+  volSlider.value = Math.round(sfx.volume * 100);
+  if (volLabel) volLabel.textContent = `${volSlider.value}%`;
+  volSlider.addEventListener("input", (e) => {
+    const val = parseInt(e.target.value, 10) / 100;
+    sfx.setVolume(val);
+    if (volLabel) volLabel.textContent = `${e.target.value}%`;
+  });
+}
+
+// Accessibility in Settings
+const toggleCb = document.getElementById("toggle-cb");
+if (toggleCb) {
+  toggleCb.checked = colorblindMode;
+  toggleCb.addEventListener("change", (e) => {
+    colorblindMode = e.target.checked;
+    document.body.classList.toggle("colorblind", colorblindMode);
+    if (cbToggleBtn) {
+      cbToggleBtn.textContent = colorblindMode ? "👁 Mù màu: BẬT" : "👁 Mù màu: Tắt";
+      cbToggleBtn.style.color = colorblindMode ? "#00B3FF" : "#c8d0de";
+    }
+  });
+}
+const toggleFont = document.getElementById("toggle-font");
+if (toggleFont) {
+  toggleFont.checked = isLargeFont;
+  toggleFont.addEventListener("change", (e) => {
+    isLargeFont = e.target.checked;
+    document.body.classList.toggle("large-font", isLargeFont);
+    if (fontToggleBtn) fontToggleBtn.textContent = isLargeFont ? "A- Chữ Chuẩn" : "A+ Chữ Lớn";
+    localStorage.setItem("dao_den_long_large_font", String(isLargeFont));
+  });
+}
+const toggleMotion = document.getElementById("toggle-motion");
+if (toggleMotion) {
+  toggleMotion.checked = isReducedMotion;
+  toggleMotion.addEventListener("change", (e) => {
+    isReducedMotion = e.target.checked;
+    document.body.classList.toggle("reduced-motion", isReducedMotion);
+    if (motionToggleBtn) {
+      motionToggleBtn.textContent = isReducedMotion ? "🌊 Giảm rung: BẬT" : "🌊 Giảm rung";
+      motionToggleBtn.style.color = isReducedMotion ? "#0be881" : "#c8d0de";
+    }
+    localStorage.setItem("dao_den_long_reduced_motion", String(isReducedMotion));
+  });
+}
+
+const btnHomeOpenKeys = document.getElementById("btn-home-open-keys");
+if (btnHomeOpenKeys) {
+  btnHomeOpenKeys.addEventListener("click", () => {
+    if (controlsModal) {
+      controlsModal.style.display = "flex";
+      renderKeybindingsList();
+    }
+  });
+}
+
+window.openSettingsModal = function () {
+  inMenuMode = true;
+  const homeEl = document.getElementById("home-screen");
+  if (homeEl) homeEl.style.display = "flex";
+  const hudEl = document.getElementById("hud");
+  if (hudEl) hudEl.style.display = "none";
+  const barEl = document.getElementById("night-bar");
+  if (barEl) barEl.style.display = "none";
+  const scoreEl = document.getElementById("score-panel");
+  if (scoreEl) scoreEl.style.display = "none";
+  const instEl = document.getElementById("instructions");
+  if (instEl) instEl.style.display = "none";
+  const pauseEl = document.getElementById("pause-overlay");
+  if (pauseEl) pauseEl.style.display = "none";
+
+  homeNavBtns.forEach((b) => b.classList.remove("active"));
+  homePanels.forEach((p) => p.classList.remove("active"));
+  const tabBtn = document.getElementById("tab-btn-settings");
+  const panelSettings = document.getElementById("panel-settings");
+  if (tabBtn) tabBtn.classList.add("active");
+  if (panelSettings) panelSettings.classList.add("active");
+};
+
+const btnOpenSettings = document.getElementById("btn-open-settings");
+if (btnOpenSettings) btnOpenSettings.addEventListener("click", window.openSettingsModal);
+const btnPauseSettings = document.getElementById("btn-pause-settings");
+if (btnPauseSettings) btnPauseSettings.addEventListener("click", window.openSettingsModal);
+const btnBarSettings = document.getElementById("btn-bar-settings");
+if (btnBarSettings) btnBarSettings.addEventListener("click", window.openSettingsModal);
+
+const btnPauseResume = document.getElementById("btn-pause-resume");
+if (btnPauseResume) {
+  btnPauseResume.addEventListener("click", () => {
+    sim.is_paused = false;
+    if (pauseOverlay) pauseOverlay.style.display = "none";
+  });
+}
+
 async function fetchAndRenderLeaderboard() {
   if (!lbTableBody) return;
   lbTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Đang tải dữ liệu...</td></tr>';
@@ -1115,6 +1484,37 @@ function animate(now) {
   requestAnimationFrame(animate);
   const frameTime = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
+
+  if (inMenuMode) {
+    accumulator = 0;
+    // Cinematic Slow Orbit Camera on Home Screen
+    const menuCamAngle = now * 0.00015;
+    camera.position.set(Math.sin(menuCamAngle) * 38, 18 + Math.sin(now * 0.0003) * 2, Math.cos(menuCamAngle) * 38);
+    camera.lookAt(0, 3, 0);
+
+    // Animate Ocean Waves if enabled
+    if (perfSettings.waterWaves) {
+      const timeSec = now * 0.0015;
+      for (let i = 0; i < seaPosAttr.count; i++) {
+        const u = seaPosAttr.getX(i);
+        const v = seaPosAttr.getY(i);
+        const wave = Math.sin(u * 0.05 + timeSec) * 0.45 + Math.cos(v * 0.05 + timeSec * 1.2) * 0.35;
+        seaPosAttr.setZ(i, seaInitialY[i] + wave);
+      }
+      seaPosAttr.needsUpdate = true;
+    }
+
+    if (perfSettings.skyLanterns) {
+      for (const sl of skyLanterns) {
+        sl.mesh.position.y = sl.initialY + Math.sin(now * 0.002 * sl.speed) * 1.5;
+      }
+    }
+
+    updateFpsBadge(now);
+    renderer.render(scene, camera);
+    return;
+  }
+
   accumulator += frameTime;
 
   while (accumulator >= DT) {
@@ -1179,19 +1579,23 @@ function animate(now) {
     pauseOverlay.style.display = sim.is_paused ? "flex" : "none";
   }
 
-  // Animate Ocean Waves
-  const timeSec = now * 0.0015;
-  for (let i = 0; i < seaPosAttr.count; i++) {
-    const u = seaPosAttr.getX(i);
-    const v = seaPosAttr.getY(i);
-    const wave = Math.sin(u * 0.05 + timeSec) * 0.45 + Math.cos(v * 0.05 + timeSec * 1.2) * 0.35;
-    seaPosAttr.setZ(i, seaInitialY[i] + wave);
+  // Animate Ocean Waves (Only if enabled in perf settings)
+  if (perfSettings.waterWaves) {
+    const timeSec = now * 0.0015;
+    for (let i = 0; i < seaPosAttr.count; i++) {
+      const u = seaPosAttr.getX(i);
+      const v = seaPosAttr.getY(i);
+      const wave = Math.sin(u * 0.05 + timeSec) * 0.45 + Math.cos(v * 0.05 + timeSec * 1.2) * 0.35;
+      seaPosAttr.setZ(i, seaInitialY[i] + wave);
+    }
+    seaPosAttr.needsUpdate = true;
   }
-  seaPosAttr.needsUpdate = true;
 
-  // Animate Floating Sky Lanterns in distance
-  for (const sl of skyLanterns) {
-    sl.mesh.position.y = sl.initialY + Math.sin(now * 0.002 * sl.speed) * 1.5;
+  // Animate Floating Sky Lanterns in distance (Only if enabled)
+  if (perfSettings.skyLanterns) {
+    for (const sl of skyLanterns) {
+      sl.mesh.position.y = sl.initialY + Math.sin(now * 0.002 * sl.speed) * 1.5;
+    }
   }
 
   // Sync Player
@@ -1525,19 +1929,7 @@ function animate(now) {
   }
 
   // Update Real-Time Live FPS Badge
-  fpsFrames++;
-  if (now - fpsLastCalc >= 250) {
-    const elapsed = (now - fpsLastCalc) / 1000;
-    const currentFps = Math.round(fpsFrames / elapsed);
-    const frameMs = (1000 / Math.max(1, currentFps)).toFixed(1);
-    if (fpsNumEl) fpsNumEl.textContent = currentFps;
-    if (fpsMsEl) fpsMsEl.textContent = `(${frameMs}ms)`;
-    if (fpsDotEl) {
-      fpsDotEl.className = "fps-dot" + (currentFps < 30 ? " bad" : currentFps < 55 ? " warn" : "");
-    }
-    fpsFrames = 0;
-    fpsLastCalc = now;
-  }
+  updateFpsBadge(now);
 
   renderer.render(scene, camera);
 }
