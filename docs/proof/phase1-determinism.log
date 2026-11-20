@@ -1,0 +1,7 @@
+=== DETERMINISM VERIFICATION LOG ===
+Timestamp: 2026-11-20
+Command 1: node src/headless.js --seed 42 --night 1 --ticks 300 --out docs/proof/run1.jsonl
+Command 2: node src/headless.js --seed 42 --night 1 --ticks 300 --out docs/proof/run2.jsonl
+Comparison: Compare-Object (Get-Content docs/proof/run1.jsonl) (Get-Content docs/proof/run2.jsonl)
+Result: 0 differences detected. Outputs are identical byte-for-byte.
+Status: PASSED.

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đảo Đèn Lồng — 3D Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #070b19; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+    #hud {
+      position: absolute; top: 16px; left: 16px; z-index: 10;
+      background: rgba(10, 15, 30, 0.75); backdrop-filter: blur(8px);
+      padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+    }
+    .hud-title { font-weight: bold; font-size: 16px; color: #ffdd59; margin-bottom: 4px; }
+    .hud-row { display: flex; justify-content: space-between; gap: 20px; }
+    .hud-val { font-weight: bold; }
+    .flames { color: #ff5e57; font-size: 16px; letter-spacing: 2px; }
+    .motes { color: #4bcffa; }
+    .lanterns { color: #ffd32a; }
+    #instructions {
+      position: absolute; bottom: 16px; left: 16px; z-index: 10;
+      background: rgba(10, 15, 30, 0.65); padding: 10px 14px; border-radius: 8px;
+      font-size: 12px; line-height: 1.5; color: #d2dae2;
+    }
+    #game-over-modal {
+      display: none; position: absolute; inset: 0; z-index: 20;
+      background: rgba(0, 0, 0, 0.85); flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    #game-over-title { font-size: 36px; font-weight: bold; }
+    #game-over-score { font-size: 20px; color: #ffd32a; }
+    .btn-restart {
+      padding: 10px 24px; font-size: 16px; font-weight: bold; background: #0be881;
+      border: none; border-radius: 8px; cursor: pointer; color: #1e272e;
+    }
+    .btn-restart:hover { background: #05c46b; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="hud">
+    <div class="hud-title">🏮 Đảo Đèn Lồng (Phase 1)</div>
+    <div class="hud-row"><span>Sinh lực (Flames):</span><span id="flames-val" class="flames">🔥🔥🔥</span></div>
+    <div class="hud-row"><span>Đom đóm mang theo:</span><span id="carried-val" class="motes">0 / 5</span></div>
+    <div class="hud-row"><span>Đèn đã thắp:</span><span id="lanterns-val" class="lanterns">0 / 5</span></div>
+    <div class="hud-row"><span>Thời gian còn lại:</span><span id="time-val" class="hud-val">300s</span></div>
+    <div class="hud-row"><span>Điểm số:</span><span id="score-val" class="hud-val">0</span></div>
+  </div>
+
+  <div id="instructions">
+    <b>Điều khiển:</b><br>
+    • <b>W / A / S / D</b> hoặc <b>Phím Mũi Tên</b>: Di chuyển Mây<br>
+    • <b>E</b>: Nạp đom đóm vào Đèn Lồng Lớn (khi đứng gần)<br>
+    • <b>Space (Phím Cách)</b>: Tỏa sáng (Pulse) làm choáng & đẩy lùi Bóng Mực
+  </div>
+
+  <div id="game-over-modal">
+    <div id="game-over-title">CHIẾN THẮNG!</div>
+    <div id="game-over-score">Điểm số: 0</div>
+    <button class="btn-restart" onclick="location.reload()">Chơi lại</button>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
