@@ -3,163 +3,253 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dao Den Long — Lantern Island</title>
+  <title>Đảo Đèn Lồng — Phase 2: Ba Hòn Đảo</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #030610; font-family: 'Inter', system-ui, sans-serif; color: #e8ecf1; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
 
-    /* ── HUD Panel ── */
+    /* ── Top Bar: Night Selector ── */
+    #night-bar {
+      position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10;
+      display: flex; gap: 8px; background: rgba(8,14,36,0.85); backdrop-filter: blur(16px);
+      padding: 6px 10px; border-radius: 12px; border: 1px solid rgba(100,140,255,0.15);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .night-btn {
+      padding: 6px 14px; font-size: 12px; font-weight: 600; color: #8e9bb2;
+      background: transparent; border: 1px solid transparent; border-radius: 8px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .night-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+    .night-btn.active {
+      color: #ffd32a; background: rgba(255,211,42,0.12);
+      border-color: rgba(255,211,42,0.3); box-shadow: 0 0 10px rgba(255,211,42,0.15);
+    }
+
+    /* ── HUD Panel (Top-Left) ── */
     #hud {
       position: absolute; top: 20px; left: 20px; z-index: 10;
-      background: linear-gradient(145deg, rgba(8,14,36,0.88), rgba(14,22,52,0.82));
+      background: linear-gradient(145deg, rgba(8,14,36,0.9), rgba(14,22,52,0.84));
       backdrop-filter: blur(16px) saturate(1.4);
-      padding: 18px 22px 14px; border-radius: 16px; min-width: 260px;
-      border: 1px solid rgba(100,140,255,0.12);
+      padding: 16px 20px 14px; border-radius: 16px; min-width: 270px;
+      border: 1px solid rgba(100,140,255,0.14);
       box-shadow: 0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
     }
     .hud-title {
       font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
       background: linear-gradient(90deg, #ffd32a, #ff9f43);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 12px; padding-bottom: 10px;
+      margin-bottom: 10px; padding-bottom: 8px;
       border-bottom: 1px solid rgba(255,211,42,0.15);
+      display: flex; justify-content: space-between; align-items: center;
     }
+    .hud-sub { font-size: 11px; color: #7f8fa6; font-weight: 500; text-transform: none; }
     .hud-row {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 5px 0; font-size: 13px; color: #9ba7bf;
+      padding: 4px 0; font-size: 13px; color: #9ba7bf;
     }
     .hud-row .label { font-weight: 500; }
-    .hud-val { font-weight: 700; font-size: 14px; }
-    .flames-bar { display: flex; gap: 3px; }
+    .hud-val { font-weight: 700; font-size: 13px; }
+    .flames-bar { display: flex; gap: 4px; }
     .flame-icon { width: 18px; height: 18px; filter: drop-shadow(0 0 4px #ff5e57); transition: opacity 0.3s; }
     .flame-icon.lost { opacity: 0.15; filter: none; }
     .val-cyan { color: #4bcffa; }
     .val-gold { color: #ffd32a; }
-    .val-white { color: #fff; }
-    .val-score { color: #0be881; font-size: 16px; }
 
-    /* ── Progress Bars ── */
-    .bar-track { width: 80px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 3px; transition: width 0.25s ease; }
+    /* Progress Bars */
+    .bar-track { width: 85px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; transition: width 0.2s ease; }
     .bar-cyan .bar-fill { background: linear-gradient(90deg, #0abde3, #4bcffa); }
     .bar-gold .bar-fill { background: linear-gradient(90deg, #f6b93b, #ffd32a); }
 
-    /* ── Score panel (top-right) ── */
+    /* Cooldown mini indicators */
+    .cd-group { display: flex; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .cd-pill {
+      flex: 1; display: flex; flex-direction: column; gap: 3px;
+      background: rgba(255,255,255,0.04); padding: 5px 8px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.06); font-size: 11px;
+    }
+    .cd-header { display: flex; justify-content: space-between; color: #8e9bb2; }
+    .cd-bar-track { width: 100%; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+    .cd-bar-fill { height: 100%; width: 100%; background: #0be881; border-radius: 2px; }
+    .cd-bar-fill.cooldown { background: #ff5e57; }
+
+    /* Charm Banner */
+    #charm-banner {
+      display: none; margin-top: 8px; padding: 4px 8px; border-radius: 6px;
+      background: rgba(235, 77, 75, 0.2); border: 1px solid rgba(235, 77, 75, 0.4);
+      color: #ff7979; font-size: 11px; font-weight: 600; text-align: center;
+      animation: charm-pulse 1.2s infinite;
+    }
+    @keyframes charm-pulse { 0%,100%{ opacity: 1; } 50%{ opacity: 0.6; } }
+
+    /* Wind Warning (Night 3) */
+    #wind-banner {
+      display: none; margin-top: 8px; padding: 4px 8px; border-radius: 6px;
+      background: rgba(69, 170, 242, 0.2); border: 1px solid rgba(69, 170, 242, 0.4);
+      color: #45aaf2; font-size: 11px; font-weight: 600; text-align: center;
+    }
+
+    /* ── Score & Timer (Top-Right) ── */
     #score-panel {
       position: absolute; top: 20px; right: 20px; z-index: 10; text-align: right;
-      background: linear-gradient(145deg, rgba(8,14,36,0.85), rgba(14,22,52,0.78));
+      background: linear-gradient(145deg, rgba(8,14,36,0.88), rgba(14,22,52,0.82));
       backdrop-filter: blur(16px); padding: 14px 20px; border-radius: 14px;
       border: 1px solid rgba(100,140,255,0.12);
       box-shadow: 0 4px 24px rgba(0,0,0,0.4);
     }
     #score-panel .score-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; color: #6b7a94; text-transform: uppercase; }
-    #score-panel .score-num { font-size: 28px; font-weight: 700; color: #0be881; text-shadow: 0 0 20px rgba(11,232,129,0.3); }
-    #timer-display {
-      margin-top: 8px; font-size: 20px; font-weight: 600; color: #fff;
-      font-variant-numeric: tabular-nums;
-    }
+    #score-panel .score-num { font-size: 26px; font-weight: 700; color: #0be881; text-shadow: 0 0 16px rgba(11,232,129,0.3); }
+    #timer-display { margin-top: 4px; font-size: 19px; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; }
     #timer-display.warning { color: #ff5e57; animation: pulse-warn 1s ease infinite; }
     @keyframes pulse-warn { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
 
-    /* ── Instructions (bottom-center) ── */
+    /* ── Instructions (Bottom-Center) ── */
     #instructions {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-      z-index: 10; display: flex; gap: 10px; align-items: center;
-      background: rgba(8,14,36,0.7); backdrop-filter: blur(12px);
-      padding: 10px 20px; border-radius: 10px;
-      border: 1px solid rgba(100,140,255,0.08);
+      z-index: 10; display: flex; gap: 8px; align-items: center;
+      background: rgba(8,14,36,0.75); backdrop-filter: blur(12px);
+      padding: 9px 18px; border-radius: 10px;
+      border: 1px solid rgba(100,140,255,0.1);
       font-size: 12px; color: #7a89a4; white-space: nowrap;
     }
     .key-group { display: flex; align-items: center; gap: 4px; }
     .key {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 24px; height: 24px; padding: 0 6px;
+      min-width: 22px; height: 22px; padding: 0 5px;
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
       border-radius: 5px; font-size: 11px; font-weight: 600; color: #c8d0de;
     }
-    .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+    .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 3px; }
 
     /* ── Proximity Hint ── */
     #proximity-hint {
       position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
-      z-index: 10; display: none; padding: 8px 18px; border-radius: 8px;
+      z-index: 10; display: none; padding: 7px 16px; border-radius: 8px;
       background: rgba(255,211,42,0.15); border: 1px solid rgba(255,211,42,0.3);
-      color: #ffd32a; font-size: 13px; font-weight: 600;
-      animation: float-hint 2s ease-in-out infinite;
+      color: #ffd32a; font-size: 12px; font-weight: 600;
     }
-    @keyframes float-hint { 0%,100%{ transform: translateX(-50%) translateY(0); } 50%{ transform: translateX(-50%) translateY(-4px); } }
 
-    /* ── Game Over ── */
+    /* ── Pause Overlay ── */
+    #pause-overlay {
+      display: none; position: absolute; inset: 0; z-index: 25;
+      background: rgba(3, 6, 16, 0.7); backdrop-filter: blur(8px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    }
+    #pause-title { font-size: 32px; font-weight: 700; color: #ffd32a; letter-spacing: 2px; }
+    #pause-hint { font-size: 14px; color: #a4b0be; }
+
+    /* ── Game Over Modal ── */
     #game-over-modal {
       display: none; position: absolute; inset: 0; z-index: 30;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.95) 100%);
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.96) 100%);
       flex-direction: column; align-items: center; justify-content: center; gap: 12px;
     }
-    #game-over-title { font-size: 42px; font-weight: 700; letter-spacing: 2px; }
-    #game-over-score { font-size: 22px; color: #ffd32a; font-weight: 500; }
+    #game-over-title { font-size: 40px; font-weight: 700; letter-spacing: 2px; }
+    #game-over-score { font-size: 20px; color: #ffd32a; font-weight: 500; }
     .btn-restart {
-      margin-top: 10px; padding: 12px 36px; font-size: 15px; font-weight: 700;
+      margin-top: 10px; padding: 12px 34px; font-size: 14px; font-weight: 700;
       background: linear-gradient(135deg, #0be881, #05c46b); color: #0a1e12;
       border: none; border-radius: 10px; cursor: pointer; letter-spacing: 0.5px;
       box-shadow: 0 4px 20px rgba(11,232,129,0.3);
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s;
     }
-    .btn-restart:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(11,232,129,0.45); }
+    .btn-restart:hover { transform: translateY(-2px); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
   <div id="canvas-container"></div>
 
+  <!-- Night Selector: Top Center -->
+  <div id="night-bar">
+    <button class="night-btn active" id="btn-night-1" onclick="switchNight(1)">Đêm 1: Đảo Bến</button>
+    <button class="night-btn" id="btn-night-2" onclick="switchNight(2)">Đêm 2: Đảo Cau</button>
+    <button class="night-btn" id="btn-night-3" onclick="switchNight(3)">Đêm 3: Đảo Chuông</button>
+  </div>
+
   <!-- HUD: top-left -->
   <div id="hud">
-    <div class="hud-title">Dao Den Long</div>
+    <div class="hud-title">
+      <span id="map-title">Đảo Bến</span>
+      <span class="hud-sub" id="night-sub">Đêm 1</span>
+    </div>
     <div class="hud-row">
-      <span class="label">Sinh luc</span>
+      <span class="label">Sinh lực</span>
       <div id="flames-bar" class="flames-bar"></div>
     </div>
     <div class="hud-row">
-      <span class="label">Dom dom</span>
+      <span class="label">Đom đóm</span>
       <div style="display:flex;align-items:center;gap:8px;">
-        <span id="carried-val" class="hud-val val-cyan">0/5</span>
+        <span id="carried-val" class="hud-val val-cyan">0/10</span>
         <div class="bar-track bar-cyan"><div id="carried-bar" class="bar-fill" style="width:0%"></div></div>
       </div>
     </div>
     <div class="hud-row">
-      <span class="label">Den long</span>
+      <span class="label">Đèn lồng</span>
       <div style="display:flex;align-items:center;gap:8px;">
         <span id="lanterns-val" class="hud-val val-gold">0/5</span>
         <div class="bar-track bar-gold"><div id="lanterns-bar" class="bar-fill" style="width:0%"></div></div>
       </div>
     </div>
+
+    <!-- Cooldowns -->
+    <div class="cd-group">
+      <div class="cd-pill">
+        <div class="cd-header"><span>Shift Lướt</span><span id="dash-cd-text">Sẵn sàng</span></div>
+        <div class="cd-bar-track"><div id="dash-cd-bar" class="cd-bar-fill"></div></div>
+      </div>
+      <div class="cd-pill">
+        <div class="cd-header"><span>Q Tỏa Sáng</span><span id="pulse-cd-text">Sẵn sàng</span></div>
+        <div class="cd-bar-track"><div id="pulse-cd-bar" class="cd-bar-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- Charm & Wind Alerts -->
+    <div id="charm-banner">⚡ BÙA HỘ MỆNH KÍCH HOẠT: +Tốc độ &amp; Lướt không hồi chiêu!</div>
+    <div id="wind-banner">💨 GIÓ MẠNH: Đẩy trôi 2 m/s!</div>
   </div>
 
   <!-- Score & Timer: top-right -->
   <div id="score-panel">
-    <div class="score-label">Diem so</div>
+    <div class="score-label">Điểm số</div>
     <div id="score-val" class="score-num">0</div>
     <div id="timer-display">05:00</div>
   </div>
 
   <!-- Proximity hint -->
-  <div id="proximity-hint">Nhan <span class="key" style="display:inline-flex;margin:0 2px;">E</span> de nap dom dom vao den</div>
+  <div id="proximity-hint">Nhấn <span class="key" style="display:inline-flex;margin:0 2px;">E</span> để nạp đom đóm vào đèn</div>
 
   <!-- Instructions: bottom-center -->
   <div id="instructions">
-    <div class="key-group"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> <span style="margin-left:2px;">Di chuyen</span></div>
+    <div class="key-group"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Di chuyển</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">E</span> Nap den</div>
+    <div class="key-group"><span class="key">Space</span> Nhảy</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">Space</span> Toa sang</div>
+    <div class="key-group"><span class="key">Shift</span> Lướt</div>
+    <div class="sep"></div>
+    <div class="key-group"><span class="key">E</span> Nạp đèn</div>
+    <div class="sep"></div>
+    <div class="key-group"><span class="key">Q / F</span> Tỏa sáng</div>
+    <div class="sep"></div>
+    <div class="key-group"><span class="key">P</span> Tạm dừng</div>
+    <div class="sep"></div>
+    <div id="sound-toggle" class="key" style="cursor:pointer;" title="Bật/Tắt âm thanh">🔊</div>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div id="pause-overlay">
+    <div id="pause-title">TẠM DỪNG</div>
+    <div id="pause-hint">Nhấn [P] hoặc [ESC] để tiếp tục cuộc hành trình</div>
   </div>
 
   <!-- Game Over -->
   <div id="game-over-modal">
-    <div id="game-over-title">CHIEN THANG!</div>
-    <div id="game-over-score">Diem: 0</div>
-    <button class="btn-restart" onclick="location.reload()">Choi Lai</button>
+    <div id="game-over-title">CHIẾN THẮNG!</div>
+    <div id="game-over-score">Điểm: 0</div>
+    <button class="btn-restart" onclick="location.reload()">Chơi Lại</button>
   </div>
 
   <script type="module" src="game.js"></script>

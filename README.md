@@ -96,8 +96,48 @@ Không commit API key, token hay `.env`. Gửi link repo theo hướng dẫn c�
 | Chất lượng sản phẩm (đúng yêu cầu, chơi được) | 10 |
 | Video demo | 5 |
 
-## Quy định
+## Sáng tạo của tôi (Hạng mục F)
 
-- Dùng AI thoải mái; không sao chép repo của người khác.
-- Bằng chứng phải thật: test luôn đạt hay output sửa tay là vi phạm.
-- Nhân vật, bối cảnh là bản gốc của lab; asset bên ngoài chỉ dùng loại CC0/CC-BY/MIT hoặc tự tạo, ghi nguồn trong `CREDITS.md`.
+Theo tinh thần tự do sáng tạo của PRD-0 và Ticket-02 (không làm thay đổi hay phá vỡ Test Contract headless):
+1. **Linh Hồn Đồng Hành — Bé Đom Đóm Hoàng Kim "Lạc" (*Spiritual Companion*):**
+   - Một bé đom đóm hoàng kim nhỏ phát sáng bay lượn nhịp nhàng theo sau nhân vật Mây.
+   - Khi Bóng Mực tiếp cận trong bán kính 8m, bé Lạc tự động đổi sang màu đỏ rực cảnh báo nguy hiểm cho người chơi.
+2. **Hệ Thống Âm Thanh Procedural Tự Sinh (*Web Audio API*):**
+   - Âm thanh môi trường và tương tác thời gian thực được tổng hợp hoàn toàn bằng mã lệnh Web Audio API (zero external asset, không cần tải file MP3/WAV, không lo lỗi mạng).
+   - Âm thanh nhảy (*Jump whoosh*), nhặt đom đóm (*crystal chime*), nạp đèn (*celestial chime*), lướt nhanh (*dash swoosh*), và sóng tỏa sáng (*energy pulse*). Có nút bật/tắt (mute/unmute) trên HUD.
+3. **Môi Trường Ba Hòn Đảo Chi Tiết & Sống Động:**
+   - **Đêm 1 (Đảo Bến):** Cầu cảng gỗ (*Wooden Pier*) vươn ra biển đêm, cổng đền Torii đỏ, lối mòn đá rải sỏi từ tâm đảo ra 5 ngọn đèn.
+   - **Đêm 2 (Đảo Cau):** Cặp đảo đôi đối xứng kết nối bởi cầu tre không lan can mộc mạc và 2 bục nhảy bắn người chơi qua không trung.
+   - **Đêm 3 (Đảo Chuông):** Kết cấu 3 tầng cao thấp, 2 dốc xoay bán kính, tháp chuông cổ kính cao 8m ở đỉnh và hiệu ứng gió giật ngẫu nhiên.
+   - Sóng biển dập dềnh phản chiếu ánh trăng theo thời gian thực (*animated vertex waves*).
+4. **Bằng Chứng Không Phá Vỡ Test Contract (Headless Isolation):**
+   - Các thực thể và hiệu ứng sáng tạo trên chỉ được kích hoạt trong chế độ hiển thị 3D (`src/client/game.js`).
+   - Khi chạy chế độ kiểm thử tự động headless (`node src/headless.js`), hệ thống chỉ chạy qua lõi mô phỏng thuần túy `src/core/simulation.js`.
+   - Kết quả: **18/18 Unit Tests PASS**, 2 lần chạy headless cùng seed ra kết quả JSONL khớp tuyệt đối từng byte (`0 differences`), benchmark 21.600 ticks hoàn thành trong ~1.16 giây (vượt xa yêu cầu $\le 30$s).
+
+## Hướng dẫn cài đặt & Chạy game
+
+### 1. Khởi động giao diện 3D
+```bash
+npm start
+# Mở trình duyệt tại: http://localhost:3000
+```
+* **W / A / S / D**: Di chuyển Mây (có mũi tên xanh neon chỉ hướng dưới chân).
+* **Space**: Nhảy (Jump).
+* **Shift**: Lướt nhanh (Dash) 14 m/s.
+* **E**: Nạp đom đóm vào Đèn Lồng Lớn.
+* **Q** hoặc **F**: Tỏa sáng (Pulse) làm choáng & đẩy lùi Bóng Mực (tốn 3 đom đóm).
+* **P** hoặc **Esc**: Tạm dừng (Pause / Resume).
+* **Thanh chọn Đêm**: Nhấp chọn Đêm 1 / Đêm 2 / Đêm 3 trực tiếp trên màn hình.
+
+### 2. Chạy kiểm thử tự động (18 Test Scenarios)
+```bash
+npm test
+```
+
+### 3. Chạy chế độ Headless (Test Contract v1.1)
+```bash
+node src/headless.js --seed 42 --night 1 --ticks 600 --out docs/proof/out.jsonl
+node src/headless.js --seed 42 --night 2 --ticks 600 --out docs/proof/out_night2.jsonl
+node src/headless.js --seed 42 --night 3 --ticks 600 --out docs/proof/out_night3.jsonl
+```

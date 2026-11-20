@@ -1,29 +1,206 @@
 export const DEFAULT_TUNING = {
   player_speed: 6.0,
-  carry_capacity: 5,
-  lantern_cost: 3,
+  player_charm_speed: 7.2,
+  carry_capacity: 10,
+  lantern_cost: 10,
   lantern_count_night1: 5,
-  pickup_radius: 1.5,
+  lantern_count_night2: 6,
+  lantern_count_night3: 7,
+  pickup_radius: 1.0,
+  pickup_dy: 1.5,
   interact_radius: 2.0,
-  pulse_cost: 1,
-  pulse_radius: 4.0,
+  pulse_cost: 3,
+  pulse_radius: 5.0,
+  pulse_stun_ticks: 120,
+  pulse_push_ticks: 15,
+  pulse_push_m: 4.0,
+  pulse_cooldown_s: 3.0,
+  pulse_cooldown_ticks: 180,
   night1_duration_s: 300,
+  night2_duration_s: 330,
+  night3_duration_s: 360,
   flames: 3,
   invuln_s: 1.5,
+  invuln_ticks: 90,
   hit_drop_ratio: 0.5,
-  pulse_stun_s: 2.0,
-  pulse_push_m: 3.0,
-  pulse_cooldown_s: 3.0,
-  safe_radius: 3.0,
-  island_radius: 30.0,
-  shade_speed: 3.5,
+  safe_radius: 6.0,
+  shade_speed_night1: 4.0,
+  shade_speed_night2: 4.0,
+  shade_speed_night3: 4.5,
+  shade_detect_radius: 12.0,
+  shade_lose_radius: 18.0,
   shade_hit_radius: 1.0,
-  fall_enabled: false,
+  shade_recoil_m: 2.0,
+  shade_recoil_ticks: 60,
+  fall_enabled: true,
+  fall_death_y: -10.0,
+  fall_wait_ticks: 60,
+  dash_speed: 14.0,
+  dash_duration_ticks: 12,
+  dash_duration_s: 0.2,
+  dash_cooldown_ticks: 90,
+  dash_cooldown_s: 1.5,
+  jump_vy: 7.0,
+  gravity: -20.0,
+  charm_duration_ticks: 600,
+  charm_respawn_ticks: 2700,
+  drifter_speed: 7.0,
+  drifter_idle_speed: 2.0,
+  drifter_chase_dist: 15.0,
+  drifter_chase_motes: 5,
+  drifter_hit_dist: 1.2,
+  drifter_steal_max: 3,
+  drifter_flee_ticks: 240,
   score: {
     per_mote: 10,
     per_lantern: 100,
-    per_stun: 20,
-    per_second_left: 1,
+    per_stun: 5,
+    per_second_left: 2,
     per_flame_left: 50
+  }
+};
+
+// Map Configurations for Night 1, 2, 3
+export const MAP_CONFIGS = {
+  1: {
+    name: "Đảo Bến",
+    duration_s: 300,
+    island_radius: 40.0,
+    start_pos: [0.0, 0.0, 0.0],
+    lanterns: [
+      { id: "L1", pos: [0.0, 0.0, 25.0] },
+      { id: "L2", pos: [23.8, 0.0, 7.7] },
+      { id: "L3", pos: [14.7, 0.0, -20.2] },
+      { id: "L4", pos: [-14.7, 0.0, -20.2] },
+      { id: "L5", pos: [-23.8, 0.0, 7.7] }
+    ],
+    // 8 points at r=12m (every 45 deg), 16 points at r=33m (every 22.5 deg)
+    mote_spawn_points: (() => {
+      const pts = [];
+      for (let i = 0; i < 8; i++) {
+        const rad = (i * 45 * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 12 * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 12 * 1000) / 1000]);
+      }
+      for (let i = 0; i < 16; i++) {
+        const rad = (i * 22.5 * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 33 * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 33 * 1000) / 1000]);
+      }
+      return pts;
+    })(),
+    // 12 points at r=37m (15, 45, 75...)
+    shade_spawn_points: (() => {
+      const pts = [];
+      for (let i = 0; i < 12; i++) {
+        const rad = ((15 + i * 30) * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 37 * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 37 * 1000) / 1000]);
+      }
+      return pts;
+    })(),
+    shade_max: 6,
+    shade_spawn_interval_ticks: 480, // every 8s
+    drifters_enabled: false,
+    wind_enabled: false,
+    jump_pads: [],
+    charms: []
+  },
+  2: {
+    name: "Đảo Cau",
+    duration_s: 330,
+    island_radius: 28.0,
+    start_pos: [0.0, 0.0, 0.0],
+    lanterns: [
+      { id: "L1", pos: [0.0, 0.0, 20.0] },
+      { id: "L2", pos: [17.0, 0.0, -10.0] },
+      { id: "L3", pos: [-17.0, 0.0, -10.0] },
+      { id: "L4", pos: [70.0, 0.0, 20.0] },
+      { id: "L5", pos: [87.0, 0.0, -10.0] },
+      { id: "L6", pos: [53.0, 0.0, -10.0] }
+    ],
+    jump_pads: [
+      { id: "JP1", pos: [20.0, 0.0, 18.0], radius: 1.0, target: [70.0, 0.0, 0.0], vy: 14.0, vx_speed: 24.0 },
+      { id: "JP2", pos: [50.0, 0.0, -18.0], radius: 1.0, target: [0.0, 0.0, 0.0], vy: 14.0, vx_speed: 24.0 }
+    ],
+    charms: [{ id: "C1", pos: [35.0, 0.0, 0.0] }],
+    mote_spawn_points: (() => {
+      const pts = [];
+      for (const cx of [0.0, 70.0]) {
+        for (let i = 0; i < 4; i++) {
+          const rad = (i * 90 * Math.PI) / 180;
+          pts.push([Math.round((cx + Math.cos(rad) * 10) * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 10 * 1000) / 1000]);
+        }
+        for (let i = 0; i < 8; i++) {
+          const rad = (i * 45 * Math.PI) / 180;
+          pts.push([Math.round((cx + Math.cos(rad) * 22) * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 22 * 1000) / 1000]);
+        }
+      }
+      return pts;
+    })(),
+    shade_spawn_points: (() => {
+      const pts = [];
+      for (const cx of [0.0, 70.0]) {
+        for (let i = 0; i < 8; i++) {
+          const rad = ((22.5 + i * 45) * Math.PI) / 180;
+          pts.push([Math.round((cx + Math.cos(rad) * 26) * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 26 * 1000) / 1000]);
+        }
+      }
+      return pts;
+    })(),
+    shade_max: 8,
+    shade_spawn_interval_ticks: 420, // every 7s
+    drifters_enabled: true,
+    wind_enabled: false
+  },
+  3: {
+    name: "Đảo Chuông",
+    duration_s: 360,
+    island_radius: 45.0,
+    start_pos: [0.0, 0.0, 0.0],
+    lanterns: [
+      { id: "L1", pos: [0.0, 6.0, 6.0] },
+      { id: "L2", pos: [18.0, 3.0, 10.0] },
+      { id: "L3", pos: [-18.0, 3.0, 10.0] },
+      { id: "L4", pos: [35.0, 0.0, -10.0] },
+      { id: "L5", pos: [-35.0, 0.0, -10.0] },
+      { id: "L6", pos: [20.0, 0.0, -35.0] },
+      { id: "L7", pos: [-20.0, 0.0, -35.0] }
+    ],
+    jump_pads: [
+      { id: "JP1", pos: [0.0, 3.0, 13.0], radius: 1.0, vy: 12.0, vx_speed: 8.0, dir: [0, 0, -1] }
+    ],
+    charms: [
+      { id: "C1", pos: [30.0, 0.0, 25.0] },
+      { id: "C2", pos: [-30.0, 0.0, 25.0] }
+    ],
+    mote_spawn_points: (() => {
+      const pts = [];
+      // Tier 0: 18 points at r=34m
+      for (let i = 0; i < 18; i++) {
+        const rad = (i * 20 * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 34 * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 34 * 1000) / 1000]);
+      }
+      // Tier 1: 8 points at r=18m (20 to 160 deg)
+      for (let deg = 20; deg <= 160; deg += 20) {
+        const rad = (deg * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 18 * 1000) / 1000, 3.0, Math.round(Math.sin(rad) * 18 * 1000) / 1000]);
+      }
+      // Tier 2: 4 points at r=5m (45, 135, 225, 315)
+      for (const deg of [45, 135, 225, 315]) {
+        const rad = (deg * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 5 * 1000) / 1000, 6.0, Math.round(Math.sin(rad) * 5 * 1000) / 1000]);
+      }
+      return pts;
+    })(),
+    shade_spawn_points: (() => {
+      const pts = [];
+      for (let i = 0; i < 16; i++) {
+        const rad = (i * 22.5 * Math.PI) / 180;
+        pts.push([Math.round(Math.cos(rad) * 43 * 1000) / 1000, 0.0, Math.round(Math.sin(rad) * 43 * 1000) / 1000]);
+      }
+      return pts;
+    })(),
+    shade_max: 10,
+    shade_spawn_interval_ticks: 360, // every 6s
+    drifters_enabled: true,
+    wind_enabled: true
   }
 };

@@ -55,6 +55,7 @@ function main() {
   try {
     sim = new Simulation({
       seed: options.seed,
+      night: options.night,
       scenario: scenarioData,
       inputs: inputsData
     });
