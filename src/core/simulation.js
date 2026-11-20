@@ -1304,11 +1304,14 @@ export class Simulation {
     if (this.night === 3) {
       const r = Math.hypot(x, z);
       if (r > 45.0) return -50.0;
+      // Tier 2: Center bell sanctuary R <= 8m at Y = 6.0
       if (r <= 8.0) return 6.0;
-      if (r >= 12.0 && r <= 24.0 && z > 0) return 3.0;
-      if (r >= 24.0 && r <= 30.0) {
+      // Tier 1: Stepped terrace 8m < R <= 24m at Y = 3.0
+      if (r <= 24.0) return 3.0;
+      // Ramps connecting Tier 0 (R=30, Y=0) to Tier 1 (R=24, Y=3)
+      if (r <= 30.0) {
         const deg = ((Math.atan2(z, x) * 180) / Math.PI + 360) % 360;
-        if (Math.abs(deg - 30) <= 4.0 || Math.abs(deg - 150) <= 4.0) {
+        if (Math.abs(deg - 30) <= 5.0 || Math.abs(deg - 150) <= 5.0 || Math.abs(deg - 210) <= 5.0 || Math.abs(deg - 330) <= 5.0) {
           const t = (30.0 - r) / 6.0;
           return round3(t * 3.0);
         }

@@ -12,6 +12,7 @@ const sim = new Simulation({
   night: currentNight,
   obstacles_enabled: true
 });
+window.sim = sim;
 
 // Update Night Bar active button
 document.querySelectorAll(".night-btn[id^='btn-night-']").forEach((btn, idx) => {
@@ -79,6 +80,19 @@ if (inMenuMode) {
   if (instEl) instEl.style.display = "none";
   const minimapEl = document.getElementById("minimap-panel");
   if (minimapEl) minimapEl.style.display = "none";
+} else {
+  const homeEl = document.getElementById("home-screen");
+  if (homeEl) homeEl.style.display = "none";
+  const hudEl = document.getElementById("hud");
+  if (hudEl) hudEl.style.display = "block";
+  const barEl = document.getElementById("night-bar");
+  if (barEl) barEl.style.display = "flex";
+  const scoreEl = document.getElementById("score-panel");
+  if (scoreEl) scoreEl.style.display = "block";
+  const instEl = document.getElementById("instructions");
+  if (instEl) instEl.style.display = "flex";
+  const minimapEl = document.getElementById("minimap-panel");
+  if (minimapEl) minimapEl.style.display = "flex";
 }
 
 const mapTitleEl = document.getElementById("map-title");
@@ -108,6 +122,14 @@ let targetCamYaw = 0;
 let targetCamPitch = 0.535;
 let zoomFactor = 1.0;
 let targetZoom = 1.0;
+window.setCameraOrbit = (yaw, pitch) => {
+  targetCamYaw = yaw;
+  camYaw = yaw;
+  if (pitch !== undefined) {
+    targetCamPitch = pitch;
+    camPitch = pitch;
+  }
+};
 
 let isDraggingCam = false;
 let prevPointerX = 0;
@@ -444,67 +466,56 @@ function buildNight2Map() {
 }
 
 function buildNight3Map() {
-  // Tier 0: Ground Disc R=45 at Y=0
+  const terraceWallMat = new THREE.MeshStandardMaterial({ color: 0x576574, roughness: 0.75, flatShading: true });
+
+  // Tier 0: Ground Base Disc R=45 at Y=0
   const land0 = new THREE.Mesh(new THREE.CylinderGeometry(45, 52, 5, 64), cliffMat);
   land0.position.y = -2.5;
   land0.receiveShadow = true;
   islandGroup.add(land0);
 
-  const grass0 = new THREE.Mesh(new THREE.RingGeometry(0, 45, 64), grassMat);
+  const grass0 = new THREE.Mesh(new THREE.CircleGeometry(45, 64), grassMat);
   grass0.rotation.x = -Math.PI / 2;
   grass0.position.y = 0.01;
   grass0.receiveShadow = true;
   islandGroup.add(grass0);
 
-  // Tier 1: Annular plateau 12 <= r <= 24, z >= 0 at Y=3.0
-  const t1Group = new THREE.Group();
-  t1Group.position.set(0, 1.5, 0);
+  // Tier 1: Full Circular Ring Terrace (8 <= R <= 24, Height 3.0m)
+  const t1Cylinder = new THREE.Mesh(new THREE.CylinderGeometry(24, 24.3, 3, 64), terraceWallMat);
+  t1Cylinder.position.y = 1.5;
+  t1Cylinder.receiveShadow = true;
+  t1Cylinder.castShadow = true;
+  islandGroup.add(t1Cylinder);
 
-  // Tier 1 Grass top surface (z >= 0)
-  const ringGeo = new THREE.RingGeometry(12, 24, 48, 1, 0, Math.PI);
-  const ringMesh = new THREE.Mesh(ringGeo, grassMat);
-  ringMesh.rotation.x = -Math.PI / 2;
-  ringMesh.position.y = 1.51;
-  ringMesh.receiveShadow = true;
-  t1Group.add(ringMesh);
+  const t1Grass = new THREE.Mesh(new THREE.RingGeometry(8, 24, 64), grassMat);
+  t1Grass.rotation.x = -Math.PI / 2;
+  t1Grass.position.y = 3.01;
+  t1Grass.receiveShadow = true;
+  islandGroup.add(t1Grass);
 
-  // Tier 1 Outer Cliff wall (R=24, height=3, covering z >= 0)
-  const outerWallGeo = new THREE.CylinderGeometry(24, 24, 3, 48, 1, true, Math.PI * 0.5, Math.PI);
-  const outerWallMesh = new THREE.Mesh(outerWallGeo, cliffMat);
-  outerWallMesh.receiveShadow = true;
-  t1Group.add(outerWallMesh);
+  // Decorative stone rim on Tier 1 edge
+  const t1Rim = new THREE.Mesh(new THREE.TorusGeometry(24, 0.15, 8, 64), stoneMat);
+  t1Rim.rotation.x = Math.PI / 2;
+  t1Rim.position.y = 3.05;
+  islandGroup.add(t1Rim);
 
-  // Tier 1 Inner Cliff wall (R=12, height=3, covering z >= 0)
-  const innerWallGeo = new THREE.CylinderGeometry(12, 12, 3, 32, 1, true, Math.PI * 0.5, Math.PI);
-  const innerWallMesh = new THREE.Mesh(innerWallGeo, cliffMat);
-  innerWallMesh.receiveShadow = true;
-  t1Group.add(innerWallMesh);
+  // Tier 2: Central Sanctuary Mesa (R <= 8, Height 6.0m)
+  const t2Cylinder = new THREE.Mesh(new THREE.CylinderGeometry(8, 8.3, 3, 48), terraceWallMat);
+  t2Cylinder.position.y = 4.5; // From Y=3 to Y=6
+  t2Cylinder.receiveShadow = true;
+  t2Cylinder.castShadow = true;
+  islandGroup.add(t2Cylinder);
 
-  // Tier 1 Side caps at z=0 (closing the half-ring plateau with stone embankment)
-  const capGeo = new THREE.BoxGeometry(12, 3, 0.4);
-  const capLeft = new THREE.Mesh(capGeo, stoneMat);
-  capLeft.position.set(-18, 0, 0);
-  capLeft.receiveShadow = true;
-  t1Group.add(capLeft);
-
-  const capRight = new THREE.Mesh(capGeo, stoneMat);
-  capRight.position.set(18, 0, 0);
-  capRight.receiveShadow = true;
-  t1Group.add(capRight);
-
-  islandGroup.add(t1Group);
-
-  // Tier 2: Disc R=8 at Y=6.0
-  const t2Land = new THREE.Mesh(new THREE.CylinderGeometry(8, 8.5, 6, 32), cliffMat);
-  t2Land.position.y = 3.0;
-  t2Land.receiveShadow = true;
-  islandGroup.add(t2Land);
-
-  const t2Grass = new THREE.Mesh(new THREE.RingGeometry(0, 8, 32), grassMat);
+  const t2Grass = new THREE.Mesh(new THREE.CircleGeometry(8, 48), grassMat);
   t2Grass.rotation.x = -Math.PI / 2;
   t2Grass.position.y = 6.01;
   t2Grass.receiveShadow = true;
   islandGroup.add(t2Grass);
+
+  const t2Rim = new THREE.Mesh(new THREE.TorusGeometry(8, 0.15, 8, 48), stoneMat);
+  t2Rim.rotation.x = Math.PI / 2;
+  t2Rim.position.y = 6.05;
+  islandGroup.add(t2Rim);
 
   // Central Bell Tower Pavilion (Tháp Chuông Đảo Chuông: R=2m, height 8m on Tier 2)
   const towerGroup = new THREE.Group();
@@ -555,9 +566,9 @@ function buildNight3Map() {
 
   islandGroup.add(towerGroup);
 
-  // Radial Stone Ramps at 30 deg and 150 deg (connecting Tier 0 R=30 Y=0 to Tier 1 R=24 Y=3)
+  // 4 Radial Stone Ramps (connecting Tier 0 R=30 Y=0 to Tier 1 R=24 Y=3 at 30, 150, 210, 330 deg)
   const railMat = new THREE.MeshStandardMaterial({ color: 0x576574, roughness: 0.8 });
-  for (const deg of [30, 150]) {
+  for (const deg of [30, 150, 210, 330]) {
     const rad = (deg * Math.PI) / 180;
     const rampGroup = new THREE.Group();
     rampGroup.position.set(Math.cos(rad) * 27, 1.5, Math.sin(rad) * 27);
@@ -1646,7 +1657,7 @@ function updateMinimap(now, px, py, pz) {
     minimapCtx.lineWidth = 1.5;
     minimapCtx.stroke();
   } else if (currentNight === 3) {
-    // Tier 0 (R=45)
+    // Tier 0 Outer Ring (R=45)
     minimapCtx.beginPath();
     minimapCtx.arc(toU(0), toV(0), 45 * scale, 0, Math.PI * 2);
     minimapCtx.fillStyle = "rgba(18, 44, 34, 0.6)";
@@ -1655,19 +1666,17 @@ function updateMinimap(now, px, py, pz) {
     minimapCtx.lineWidth = 1.2;
     minimapCtx.stroke();
 
-    // Tier 1 (12 <= R <= 24, Z >= 0)
+    // Tier 1 Middle Ring Terrace (8 <= R <= 24)
     minimapCtx.beginPath();
-    minimapCtx.arc(toU(0), toV(0), 24 * scale, 0, Math.PI, false);
-    minimapCtx.arc(toU(0), toV(0), 12 * scale, Math.PI, 0, true);
-    minimapCtx.closePath();
+    minimapCtx.arc(toU(0), toV(0), 24 * scale, 0, Math.PI * 2);
     minimapCtx.fillStyle = "rgba(32, 90, 65, 0.75)";
     minimapCtx.fill();
     minimapCtx.strokeStyle = "rgba(46, 213, 115, 0.6)";
     minimapCtx.lineWidth = 1.2;
     minimapCtx.stroke();
 
-    // Radial ramps at 30 deg and 150 deg
-    for (const deg of [30, 150]) {
+    // 4 Radial ramps at 30, 150, 210, 330 deg
+    for (const deg of [30, 150, 210, 330]) {
       const rad = (deg * Math.PI) / 180;
       const rx1 = Math.cos(rad) * 24;
       const rz1 = Math.sin(rad) * 24;
@@ -1681,12 +1690,12 @@ function updateMinimap(now, px, py, pz) {
       minimapCtx.stroke();
     }
 
-    // Tier 2 Disc (R=8)
+    // Tier 2 Center Sanctuary Mesa (R=8)
     minimapCtx.beginPath();
     minimapCtx.arc(toU(0), toV(0), 8 * scale, 0, Math.PI * 2);
     minimapCtx.fillStyle = "rgba(45, 120, 90, 0.85)";
     minimapCtx.fill();
-    minimapCtx.strokeStyle = "rgba(255, 211, 42, 0.8)";
+    minimapCtx.strokeStyle = "rgba(255, 211, 42, 0.85)";
     minimapCtx.lineWidth = 1.5;
     minimapCtx.stroke();
 
@@ -1871,7 +1880,7 @@ function updateMinimap(now, px, py, pz) {
     } else if (currentNight === 3) {
       const r = Math.hypot(px, pz);
       if (r <= 8.0) tierText = "T2 (6m)";
-      else if (r >= 12.0 && r <= 24.0 && pz > 0) tierText = "T1 (3m)";
+      else if (r <= 24.0) tierText = "T1 (3m)";
       else tierText = "T0 (0m)";
     }
     gpsTierEl.textContent = tierText;
