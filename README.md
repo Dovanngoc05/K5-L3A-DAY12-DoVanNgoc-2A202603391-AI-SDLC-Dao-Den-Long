@@ -105,15 +105,18 @@ Theo tinh thần tự do sáng tạo của PRD-0 và Ticket-02 (không làm thay
 2. **Hệ Thống Âm Thanh Procedural Tự Sinh (*Web Audio API*):**
    - Âm thanh môi trường và tương tác thời gian thực được tổng hợp hoàn toàn bằng mã lệnh Web Audio API (zero external asset, không cần tải file MP3/WAV, không lo lỗi mạng).
    - Âm thanh nhảy (*Jump whoosh*), nhặt đom đóm (*crystal chime*), nạp đèn (*celestial chime*), lướt nhanh (*dash swoosh*), và sóng tỏa sáng (*energy pulse*). Có nút bật/tắt (mute/unmute) trên HUD.
-3. **Môi Trường Ba Hòn Đảo Chi Tiết & Sống Động:**
+3. **Môi Trường Ba Hòn Đảo Mở Rộng & Sống Động:**
    - **Đêm 1 (Đảo Bến):** Cầu cảng gỗ (*Wooden Pier*) vươn ra biển đêm, cổng đền Torii đỏ, lối mòn đá rải sỏi từ tâm đảo ra 5 ngọn đèn.
    - **Đêm 2 (Đảo Cau):** Cặp đảo đôi đối xứng kết nối bởi cầu tre không lan can mộc mạc và 2 bục nhảy bắn người chơi qua không trung.
    - **Đêm 3 (Đảo Chuông):** Kết cấu 3 tầng cao thấp, 2 dốc xoay bán kính, tháp chuông cổ kính cao 8m ở đỉnh và hiệu ứng gió giật ngẫu nhiên.
-   - Sóng biển dập dềnh phản chiếu ánh trăng theo thời gian thực (*animated vertex waves*).
-4. **Bằng Chứng Không Phá Vỡ Test Contract (Headless Isolation):**
-   - Các thực thể và hiệu ứng sáng tạo trên chỉ được kích hoạt trong chế độ hiển thị 3D (`src/client/game.js`).
+   - **Không gian bao la & Hùng vĩ:** Mặt biển mây mở rộng tới 1600m x 1600m, 28 bãi đá ngầm/rạn san hô ngoài khơi bao quanh đảo, đèn trời bay lơ lửng ở chân trời xa, và tính năng **cuộn chuột (Mouse Wheel)** để phóng to/thu nhỏ góc nhìn toàn cảnh.
+4. **Vật Thể Đá, Cây & Thuật Toán Cản Va Chạm Thực Tế (Solid Collision):**
+   - Các tảng đá rêu cổ, cây tùng phong ba, cột trụ cầu tre và tháp chuông đều có hình khối và bán kính va chạm vật lý.
+   - **Tuyệt đối không đi xuyên qua:** Cả người chơi và Bóng Mực khi va chạm vào cây hoặc đá đều bị đẩy lùi theo pháp tuyến bề mặt (solid collision pushback), ngăn chặn hoàn toàn việc đi xuyên qua vật thể.
+5. **Bằng Chứng Không Phá Vỡ Test Contract (Headless Isolation):**
+   - Các thực thể và hiệu ứng sáng tạo trên chỉ được kích hoạt trong chế độ hiển thị 3D (`src/client/game.js`) hoặc tùy chọn `obstacles_enabled`.
    - Khi chạy chế độ kiểm thử tự động headless (`node src/headless.js`), hệ thống chỉ chạy qua lõi mô phỏng thuần túy `src/core/simulation.js`.
-   - Kết quả: **18/18 Unit Tests PASS**, 2 lần chạy headless cùng seed ra kết quả JSONL khớp tuyệt đối từng byte (`0 differences`), benchmark 21.600 ticks hoàn thành trong ~1.16 giây (vượt xa yêu cầu $\le 30$s).
+   - Kết quả: **19/19 Unit Tests PASS** (gồm kiểm tra va chạm vật lý), 2 lần chạy headless cùng seed ra kết quả JSONL khớp tuyệt đối từng byte (`0 differences`), benchmark 21.600 ticks hoàn thành trong ~1.14 giây (vượt xa yêu cầu $\le 30$s).
 
 ## Hướng dẫn cài đặt & Chạy game
 
@@ -128,9 +131,10 @@ npm start
 * **E**: Nạp đom đóm vào Đèn Lồng Lớn.
 * **Q** hoặc **F**: Tỏa sáng (Pulse) làm choáng & đẩy lùi Bóng Mực (tốn 3 đom đóm).
 * **P** hoặc **Esc**: Tạm dừng (Pause / Resume).
+* **Con lăn chuột (Scroll Wheel)**: Phóng to / thu nhỏ camera để ngắm toàn cảnh đảo rộng lớn.
 * **Thanh chọn Đêm**: Nhấp chọn Đêm 1 / Đêm 2 / Đêm 3 trực tiếp trên màn hình.
 
-### 2. Chạy kiểm thử tự động (18 Test Scenarios)
+### 2. Chạy kiểm thử tự động (19 Test Scenarios)
 ```bash
 npm test
 ```

@@ -80,6 +80,8 @@ export class Simulation {
     this.drifters = [];
     this.charms = [];
     this.jump_pads = [];
+    this.obstacles_enabled = options.obstacles_enabled ?? false;
+    this.obstacles = (this.map.obstacles || []).map((o) => ({ ...o }));
 
     // Next ID counters
     this.nextMoteId = 1;
@@ -468,6 +470,11 @@ export class Simulation {
           this.player.pos[0] = round3((this.player.pos[0] / d) * maxR);
           this.player.pos[2] = round3((this.player.pos[2] / d) * maxR);
         }
+      }
+
+      // Resolve obstacle collision (cannot walk through solid trees, rocks, pillars)
+      if (this.obstacles_enabled) {
+        this.resolveObstacleCollision(this.player.pos, 0.45);
       }
 
       // 3.4 Kiểm tra độ cao mặt đất & Grounded
@@ -1050,6 +1057,26 @@ export class Simulation {
       return 0.0; // Tier 0
     }
     return 0.0;
+  }
+
+  resolveObstacleCollision(pos, radius = 0.45) {
+    if (!this.obstacles_enabled || !this.obstacles) return;
+    for (const obs of this.obstacles) {
+      const dXZ = distXZ(pos, obs.pos);
+      const minD = radius + obs.radius;
+      const dY = Math.abs(pos[1] - obs.pos[1]);
+      if (dXZ < minD && dY < (obs.height || 4.0)) {
+        if (dXZ < 0.001) {
+          pos[0] = round3(obs.pos[0] + minD);
+        } else {
+          const push = minD - dXZ;
+          const nx = (pos[0] - obs.pos[0]) / dXZ;
+          const nz = (pos[2] - obs.pos[2]) / dXZ;
+          pos[0] = round3(pos[0] + nx * push);
+          pos[2] = round3(pos[2] + nz * push);
+        }
+      }
+    }
   }
 
   getSnapshot() {

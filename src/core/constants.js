@@ -101,7 +101,19 @@ export const MAP_CONFIGS = {
     drifters_enabled: false,
     wind_enabled: false,
     jump_pads: [],
-    charms: []
+    charms: [],
+    obstacles: [
+      { id: "n1_rock1", type: "rock", pos: [10.0, 0.0, 12.0], radius: 1.2, height: 2.0 },
+      { id: "n1_rock2", type: "rock", pos: [-12.0, 0.0, 14.0], radius: 1.3, height: 2.2 },
+      { id: "n1_rock3", type: "rock", pos: [18.0, 0.0, -8.0], radius: 1.1, height: 1.8 },
+      { id: "n1_rock4", type: "rock", pos: [-16.0, 0.0, -10.0], radius: 1.2, height: 1.9 },
+      { id: "n1_tree1", type: "tree", pos: [8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      { id: "n1_tree2", type: "tree", pos: [-8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      { id: "n1_tree3", type: "tree", pos: [5.0, 0.0, 18.0], radius: 0.8, height: 4.5 },
+      { id: "n1_tree4", type: "tree", pos: [-5.0, 0.0, 18.0], radius: 0.8, height: 4.5 },
+      { id: "n1_pillar_l", type: "pillar", pos: [-2.0, 0.0, 5.0], radius: 0.4, height: 4.0 },
+      { id: "n1_pillar_r", type: "pillar", pos: [2.0, 0.0, 5.0], radius: 0.4, height: 4.0 }
+    ]
   },
   2: {
     name: "Đảo Cau",
@@ -148,7 +160,24 @@ export const MAP_CONFIGS = {
     shade_max: 8,
     shade_spawn_interval_ticks: 420, // every 7s
     drifters_enabled: true,
-    wind_enabled: false
+    wind_enabled: false,
+    obstacles: [
+      // Island A
+      { id: "a_rock1", type: "rock", pos: [10.0, 0.0, 10.0], radius: 1.2, height: 2.0 },
+      { id: "a_rock2", type: "rock", pos: [-10.0, 0.0, 12.0], radius: 1.3, height: 2.2 },
+      { id: "a_tree1", type: "tree", pos: [8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      { id: "a_tree2", type: "tree", pos: [-8.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      // Island B
+      { id: "b_rock1", type: "rock", pos: [65.0, 0.0, 10.0], radius: 1.2, height: 2.0 },
+      { id: "b_rock2", type: "rock", pos: [80.0, 0.0, 12.0], radius: 1.3, height: 2.2 },
+      { id: "b_tree1", type: "tree", pos: [63.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      { id: "b_tree2", type: "tree", pos: [78.0, 0.0, -14.0], radius: 0.9, height: 5.0 },
+      // Bridge Pillars
+      { id: "br_p1", type: "pillar", pos: [25.0, 0.0, 2.2], radius: 0.4, height: 3.0 },
+      { id: "br_p2", type: "pillar", pos: [25.0, 0.0, -2.2], radius: 0.4, height: 3.0 },
+      { id: "br_p3", type: "pillar", pos: [45.0, 0.0, 2.2], radius: 0.4, height: 3.0 },
+      { id: "br_p4", type: "pillar", pos: [45.0, 0.0, -2.2], radius: 0.4, height: 3.0 }
+    ]
   },
   3: {
     name: "Đảo Chuông",
@@ -201,6 +230,20 @@ export const MAP_CONFIGS = {
     shade_max: 10,
     shade_spawn_interval_ticks: 360, // every 6s
     drifters_enabled: true,
-    wind_enabled: true
+    wind_enabled: true,
+    obstacles: [
+      // Central Bell Tower (Ticket-02 explicit: R=2m, height 8m on Tier 2)
+      { id: "bell_tower", type: "tower", pos: [0.0, 6.0, 0.0], radius: 2.0, height: 8.0 },
+      // Tier 0 Standing Stones & Pines
+      { id: "n3_rock1", type: "rock", pos: [22.0, 0.0, 16.0], radius: 1.3, height: 2.5 },
+      { id: "n3_rock2", type: "rock", pos: [-22.0, 0.0, 16.0], radius: 1.3, height: 2.5 },
+      { id: "n3_rock3", type: "rock", pos: [26.0, 0.0, -16.0], radius: 1.2, height: 2.0 },
+      { id: "n3_rock4", type: "rock", pos: [-26.0, 0.0, -16.0], radius: 1.2, height: 2.0 },
+      { id: "n3_tree1", type: "tree", pos: [12.0, 0.0, -25.0], radius: 0.9, height: 5.0 },
+      { id: "n3_tree2", type: "tree", pos: [-12.0, 0.0, -25.0], radius: 0.9, height: 5.0 },
+      // Tier 1 Snow Pines
+      { id: "n3_t1_tree1", type: "tree", pos: [13.0, 3.0, 15.0], radius: 0.9, height: 4.5 },
+      { id: "n3_t1_tree2", type: "tree", pos: [-13.0, 3.0, 15.0], radius: 0.9, height: 4.5 }
+    ]
   }
 };

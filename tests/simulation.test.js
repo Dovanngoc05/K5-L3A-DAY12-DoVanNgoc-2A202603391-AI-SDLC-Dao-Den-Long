@@ -463,3 +463,31 @@ test("Phase 2 Performance Benchmark: 21,600 ticks completes in <= 30 seconds", (
   console.log(`      ⏱  21,600 ticks simulated in ${durationMs}ms (${(durationMs / 1000).toFixed(2)}s)`);
   assert.equal(durationMs <= 30000, true);
 });
+
+test("Phase 2: Solid obstacle collision blocks movement and prevents pass-through", () => {
+  const sim = new Simulation({
+    obstacles_enabled: true,
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [
+        { tick: 0, move: [1, 0] } // moving +X directly into a rock
+      ]
+    }
+  });
+
+  // Solid rock at pos: [2.0, 0, 0] with radius 1.0m
+  sim.obstacles = [{ id: "test_rock", pos: [2.0, 0.0, 0.0], radius: 1.0, height: 2.0 }];
+
+  // Step 60 ticks (1s) at speed 6.0 m/s (would reach X = 6.0m if unobstructed)
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+
+  // Player must be blocked at rock boundary (2.0 - 1.0 - 0.45 = 0.55m max)
+  assert.equal(sim.player.pos[0] <= 0.6, true);
+  assert.equal(sim.player.pos[0] >= 0.5, true);
+});

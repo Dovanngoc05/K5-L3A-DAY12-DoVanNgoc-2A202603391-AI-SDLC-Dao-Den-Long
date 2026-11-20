@@ -5,8 +5,12 @@ const urlParams = new URLSearchParams(window.location.search);
 let currentNight = parseInt(urlParams.get("night") || "1", 10);
 if (![1, 2, 3].includes(currentNight)) currentNight = 1;
 
-// ── Initialize Simulation ──
-const sim = new Simulation({ seed: Date.now(), night: currentNight });
+// ── Initialize Simulation with Obstacles Enabled for 3D Client ──
+const sim = new Simulation({
+  seed: Date.now(),
+  night: currentNight,
+  obstacles_enabled: true
+});
 
 // Update Night Bar active button
 document.querySelectorAll(".night-btn").forEach((btn, idx) => {
@@ -24,9 +28,9 @@ if (nightSubEl) nightSubEl.textContent = `Đêm ${currentNight}`;
 const container = document.getElementById("canvas-container");
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x020512);
-scene.fog = new THREE.FogExp2(0x060c24, 0.014);
+scene.fog = new THREE.FogExp2(0x060c24, 0.009); // Clearer atmospheric fog for vast expansive view
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 800);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 1200);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -36,56 +40,62 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 container.appendChild(renderer.domElement);
 
+// ── Dynamic Camera Zoom Controls ──
+let zoomFactor = 1.0;
+addEventListener("wheel", (e) => {
+  zoomFactor = Math.max(0.65, Math.min(2.2, zoomFactor + e.deltaY * 0.001));
+}, { passive: true });
+
 // ── Lighting ──
 const ambientLight = new THREE.AmbientLight(0x1c2b50, 0.7);
 scene.add(ambientLight);
 
-const moonDir = new THREE.DirectionalLight(0x88aaff, 1.1);
-moonDir.position.set(60, 90, -60);
+const moonDir = new THREE.DirectionalLight(0x88aaff, 1.15);
+moonDir.position.set(80, 110, -80);
 moonDir.castShadow = true;
 moonDir.shadow.mapSize.set(1024, 1024);
 moonDir.shadow.camera.near = 20;
-moonDir.shadow.camera.far = 300;
-moonDir.shadow.camera.left = -60;
-moonDir.shadow.camera.right = 60;
-moonDir.shadow.camera.top = 60;
-moonDir.shadow.camera.bottom = -60;
+moonDir.shadow.camera.far = 400;
+moonDir.shadow.camera.left = -80;
+moonDir.shadow.camera.right = 80;
+moonDir.shadow.camera.top = 80;
+moonDir.shadow.camera.bottom = -80;
 scene.add(moonDir);
 
 const skyHemisphere = new THREE.HemisphereLight(0x3d5a80, 0x050a14, 0.5);
 scene.add(skyHemisphere);
 
 // ── Moon ──
-const moonMeshGeo = new THREE.SphereGeometry(15, 32, 32);
+const moonMeshGeo = new THREE.SphereGeometry(18, 32, 32);
 const moonMeshMat = new THREE.MeshBasicMaterial({ color: 0xfffaea });
 const moonMesh = new THREE.Mesh(moonMeshGeo, moonMeshMat);
-moonMesh.position.set(120, 120, -180);
+moonMesh.position.set(160, 140, -240);
 scene.add(moonMesh);
 
-const moonAuraGeo = new THREE.SphereGeometry(24, 32, 32);
+const moonAuraGeo = new THREE.SphereGeometry(28, 32, 32);
 const moonAuraMat = new THREE.MeshBasicMaterial({ color: 0x6699ff, transparent: true, opacity: 0.12, side: THREE.BackSide });
 const moonAura = new THREE.Mesh(moonAuraGeo, moonAuraMat);
 moonAura.position.copy(moonMesh.position);
 scene.add(moonAura);
 
-// ── Starfield ──
-const starCount = 1000;
+// ── Starfield (Expanded) ──
+const starCount = 1400;
 const starGeo = new THREE.BufferGeometry();
 const starPos = new Float32Array(starCount * 3);
 for (let i = 0; i < starCount; i++) {
   const theta = Math.random() * Math.PI * 2;
   const phi = Math.acos(Math.random() * 2 - 1);
-  const r = 260 + Math.random() * 80;
+  const r = 350 + Math.random() * 120;
   starPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
   starPos[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 10;
   starPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 }
 starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, sizeAttenuation: true, transparent: true, opacity: 0.85 });
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.9, sizeAttenuation: true, transparent: true, opacity: 0.85 });
 scene.add(new THREE.Points(starGeo, starMat));
 
-// ── Animated Ocean / Sea of Clouds ──
-const seaGeo = new THREE.PlaneGeometry(600, 600, 48, 48);
+// ── Vast Animated Ocean / Sea of Clouds (1600m x 1600m) ──
+const seaGeo = new THREE.PlaneGeometry(1600, 1600, 64, 64);
 const seaMat = new THREE.MeshStandardMaterial({
   color: 0x030a1c,
   roughness: 0.15,
@@ -102,6 +112,38 @@ for (let i = 0; i < seaPosAttr.count; i++) {
   seaInitialY[i] = seaPosAttr.getZ(i);
 }
 
+// ── Distant Floating Sky Lanterns ──
+const skyLanterns = [];
+for (let i = 0; i < 30; i++) {
+  const sAngle = Math.random() * Math.PI * 2;
+  const sDist = 70 + Math.random() * 120;
+  const sY = 10 + Math.random() * 35;
+  const sMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.7, 0.5),
+    new THREE.MeshBasicMaterial({ color: 0xff9f43, transparent: true, opacity: 0.75 })
+  );
+  sMesh.position.set(Math.cos(sAngle) * sDist, sY, Math.sin(sAngle) * sDist);
+  scene.add(sMesh);
+  skyLanterns.push({ mesh: sMesh, speed: 0.2 + Math.random() * 0.3, initialY: sY });
+}
+
+// ── Outer Archipelago Shoals & Distant Reef Rocks ──
+const reefGroup = new THREE.Group();
+const reefMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9, flatShading: true });
+for (let i = 0; i < 28; i++) {
+  const angle = (i / 28) * Math.PI * 2 + Math.sin(i * 1.5) * 0.2;
+  const r = 50 + (i % 5) * 14 + Math.random() * 8;
+  const reefRock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(2.5 + Math.random() * 3.5, 1),
+    reefMat
+  );
+  reefRock.position.set(Math.cos(angle) * r, -1.8 + Math.random() * 0.8, Math.sin(angle) * r);
+  reefRock.rotation.set(Math.random() * 2, Math.random() * 2, Math.random() * 2);
+  reefRock.scale.set(1.0, 1.2 + Math.random() * 0.5, 1.0);
+  reefGroup.add(reefRock);
+}
+scene.add(reefGroup);
+
 // ── Island Geometry Construction per Night ──
 const islandGroup = new THREE.Group();
 scene.add(islandGroup);
@@ -115,7 +157,7 @@ const stoneMat = new THREE.MeshStandardMaterial({ color: 0x2f3640, roughness: 0.
 function buildNight1Map() {
   const R = 40.0;
   // Island cliff
-  const land = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 6, 5, 64), cliffMat);
+  const land = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 8, 5, 64), cliffMat);
   land.position.y = -2.5;
   land.receiveShadow = true;
   islandGroup.add(land);
@@ -127,17 +169,30 @@ function buildNight1Map() {
   grass.receiveShadow = true;
   islandGroup.add(grass);
 
-  // Pier
-  const pier = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.3, 14), woodMat);
+  // Sand Shoreline Ring
+  const sand = new THREE.Mesh(new THREE.RingGeometry(R - 3.0, R + 1.0, 64), sandMat);
+  sand.rotation.x = -Math.PI / 2;
+  sand.position.y = 0.005;
+  sand.receiveShadow = true;
+  islandGroup.add(sand);
+
+  // Wooden Pier
+  const pier = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.35, 16), woodMat);
   pier.position.set(0, -0.2, R + 5);
   pier.receiveShadow = true;
   islandGroup.add(pier);
+
+  // Central Plaza Stone
+  const centerPlaza = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.2, 0.1, 16), stoneMat);
+  centerPlaza.position.y = 0.04;
+  centerPlaza.receiveShadow = true;
+  islandGroup.add(centerPlaza);
 }
 
 function buildNight2Map() {
   const R = 28.0;
   // Island A at (0,0,0)
-  const landA = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 5, 5, 48), cliffMat);
+  const landA = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 6, 5, 48), cliffMat);
   landA.position.set(0, -2.5, 0);
   landA.receiveShadow = true;
   islandGroup.add(landA);
@@ -149,7 +204,7 @@ function buildNight2Map() {
   islandGroup.add(grassA);
 
   // Island B at (70,0,0)
-  const landB = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 5, 5, 48), cliffMat);
+  const landB = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 6, 5, 48), cliffMat);
   landB.position.set(70, -2.5, 0);
   landB.receiveShadow = true;
   islandGroup.add(landB);
@@ -177,7 +232,7 @@ function buildNight2Map() {
 
 function buildNight3Map() {
   // Tier 0: Disc R=45 at Y=0
-  const land0 = new THREE.Mesh(new THREE.CylinderGeometry(45, 50, 5, 64), cliffMat);
+  const land0 = new THREE.Mesh(new THREE.CylinderGeometry(45, 52, 5, 64), cliffMat);
   land0.position.y = -2.5;
   land0.receiveShadow = true;
   islandGroup.add(land0);
@@ -233,7 +288,7 @@ function buildNight3Map() {
     rampGroup.position.set(Math.cos(rad) * 27, 1.5, Math.sin(rad) * 27);
     rampGroup.rotation.y = -rad;
     const ramp = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 6.5), stoneMat);
-    ramp.rotation.x = -0.45; // slope climbing towards center
+    ramp.rotation.x = -0.45;
     ramp.receiveShadow = true;
     rampGroup.add(ramp);
     islandGroup.add(rampGroup);
@@ -244,8 +299,57 @@ if (currentNight === 1) buildNight1Map();
 else if (currentNight === 2) buildNight2Map();
 else if (currentNight === 3) buildNight3Map();
 
+// ── Solid Obstacles 3D Rendering (Rocks, Trees, Pillars, Tower) ──
+const obstacleGroup = new THREE.Group();
+scene.add(obstacleGroup);
+
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x3d4351, roughness: 0.9, flatShading: true });
+const rockMossMat = new THREE.MeshStandardMaterial({ color: 0x223a26, roughness: 0.85, flatShading: true });
+const treeTrunkMat = new THREE.MeshStandardMaterial({ color: 0x2d1d13, roughness: 0.9 });
+const pineFoliageMat = new THREE.MeshStandardMaterial({ color: 0x0f2b1d, roughness: 0.85, flatShading: true });
+const pillarVermilionMat = new THREE.MeshStandardMaterial({ color: 0xeb3b5a, roughness: 0.5 });
+const pillarStoneMat = new THREE.MeshStandardMaterial({ color: 0x485460, roughness: 0.8 });
+
+for (const obs of sim.obstacles) {
+  const oGroup = new THREE.Group();
+  oGroup.position.set(obs.pos[0], obs.pos[1], obs.pos[2]);
+
+  if (obs.type === "rock") {
+    // Multi-faceted boulder
+    const rockGeo = new THREE.DodecahedronGeometry(obs.radius, 1);
+    const rockMesh = new THREE.Mesh(rockGeo, Math.random() > 0.5 ? rockMat : rockMossMat);
+    rockMesh.scale.set(1.0, 0.85, 1.0);
+    rockMesh.position.y = obs.radius * 0.7;
+    rockMesh.castShadow = true;
+    rockMesh.receiveShadow = true;
+    oGroup.add(rockMesh);
+  } else if (obs.type === "tree") {
+    // Ancient pine tree
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(obs.radius * 0.35, obs.radius * 0.5, 1.8, 8), treeTrunkMat);
+    trunk.position.y = 0.9;
+    trunk.castShadow = true;
+    oGroup.add(trunk);
+
+    for (let lvl = 0; lvl < 3; lvl++) {
+      const coneR = obs.radius * (1.6 - lvl * 0.35);
+      const coneH = 1.4;
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(coneR, coneH, 8), pineFoliageMat);
+      cone.position.y = 1.6 + lvl * 0.85;
+      cone.castShadow = true;
+      oGroup.add(cone);
+    }
+  } else if (obs.type === "pillar") {
+    const pMat = obs.id.includes("pillar") ? pillarVermilionMat : pillarStoneMat;
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(obs.radius, obs.radius * 1.1, obs.height || 3.5, 12), pMat);
+    p.position.y = (obs.height || 3.5) / 2;
+    p.castShadow = true;
+    p.receiveShadow = true;
+    oGroup.add(p);
+  }
+  obstacleGroup.add(oGroup);
+}
+
 // ── Jump Pads Visuals ──
-const jumpPadMeshes = [];
 for (const jp of sim.jump_pads) {
   const padGroup = new THREE.Group();
   padGroup.position.set(jp.pos[0], jp.pos[1] + 0.05, jp.pos[2]);
@@ -265,7 +369,6 @@ for (const jp of sim.jump_pads) {
   padGroup.add(ring);
 
   scene.add(padGroup);
-  jumpPadMeshes.push(padGroup);
 }
 
 // ── Charms Visuals (Bùa Hộ Mệnh) ──
@@ -275,14 +378,12 @@ function getOrCreateCharm(c) {
   const grp = new THREE.Group();
   grp.position.set(c.pos[0], c.pos[1] + 1.0, c.pos[2]);
 
-  // Talisman Body (Red Parchment)
   const talisman = new THREE.Mesh(
     new THREE.BoxGeometry(0.35, 0.7, 0.04),
     new THREE.MeshStandardMaterial({ color: 0xee5253, roughness: 0.6, emissive: 0xb33939, emissiveIntensity: 0.5 })
   );
   grp.add(talisman);
 
-  // Golden Rune Trim
   const rune = new THREE.Mesh(
     new THREE.RingGeometry(0.08, 0.14, 8),
     new THREE.MeshBasicMaterial({ color: 0xffd32a, side: THREE.DoubleSide })
@@ -457,27 +558,27 @@ function getOrCreateShade(s) {
   const grp = new THREE.Group();
   grp.position.set(s.pos[0], s.pos[1] + 0.75, s.pos[2]);
 
-  const coreMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.95 });
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), coreMat);
+  const sCoreMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.95 });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 16), sCoreMat);
   core.scale.set(1.0, 1.25, 1.0);
   core.castShadow = true;
   grp.add(core);
 
-  const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff3838 });
-  const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+  const sEyeMat = new THREE.MeshBasicMaterial({ color: 0xff3838 });
+  const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), sEyeMat);
   leftEye.position.set(-0.16, 0.15, 0.45);
   grp.add(leftEye);
 
-  const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), eyeMat);
+  const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), sEyeMat);
   rightEye.position.set(0.16, 0.15, 0.45);
   grp.add(rightEye);
 
-  const auraMat = new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.25, side: THREE.BackSide });
-  const aura = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), auraMat);
+  const sAuraMat = new THREE.MeshBasicMaterial({ color: 0x220033, transparent: true, opacity: 0.25, side: THREE.BackSide });
+  const aura = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), sAuraMat);
   grp.add(aura);
 
   scene.add(grp);
-  const obj = { grp, coreMat, eyeMat, auraMat };
+  const obj = { grp, coreMat: sCoreMat, eyeMat: sEyeMat, auraMat: sAuraMat };
   shadeMeshMap.set(s.id, obj);
   return obj;
 }
@@ -489,7 +590,6 @@ function getOrCreateDrifter(d) {
   const grp = new THREE.Group();
   grp.position.set(d.pos[0], d.pos[1] + 1.2, d.pos[2]);
 
-  // Silk ribbon geometry
   const ribbonGeo = new THREE.PlaneGeometry(0.4, 1.8, 6, 6);
   const ribbonMat = new THREE.MeshBasicMaterial({
     color: 0x74b9ff,
@@ -612,7 +712,6 @@ const keys = {};
 addEventListener("keydown", (e) => {
   keys[e.code] = true;
   if (e.code === "KeyP" || e.code === "Escape") {
-    // Toggle pause via input
     sim.currentInput.pause = true;
   }
 });
@@ -658,8 +757,8 @@ updateFlamesUI();
 let accumulator = 0;
 let lastTime = performance.now();
 const DT = 1 / 60;
-const CAM_DIST = 14;
-const CAM_HEIGHT = 8.5;
+const BASE_CAM_DIST = 16.0;
+const BASE_CAM_HEIGHT = 9.5;
 
 function animate(now) {
   requestAnimationFrame(animate);
@@ -689,7 +788,6 @@ function animate(now) {
 
     sim.step();
 
-    // Reset single-frame pulse toggle
     if (sim.currentInput.pause) {
       sim.currentInput.pause = false;
     }
@@ -722,7 +820,6 @@ function animate(now) {
   const py = sim.player.pos[1];
   const pz = sim.player.pos[2];
 
-  // Pause overlay display
   if (pauseOverlay) {
     pauseOverlay.style.display = sim.is_paused ? "flex" : "none";
   }
@@ -732,10 +829,15 @@ function animate(now) {
   for (let i = 0; i < seaPosAttr.count; i++) {
     const u = seaPosAttr.getX(i);
     const v = seaPosAttr.getY(i);
-    const wave = Math.sin(u * 0.05 + timeSec) * 0.4 + Math.cos(v * 0.05 + timeSec * 1.2) * 0.3;
+    const wave = Math.sin(u * 0.05 + timeSec) * 0.45 + Math.cos(v * 0.05 + timeSec * 1.2) * 0.35;
     seaPosAttr.setZ(i, seaInitialY[i] + wave);
   }
   seaPosAttr.needsUpdate = true;
+
+  // Animate Floating Sky Lanterns in distance
+  for (const sl of skyLanterns) {
+    sl.mesh.position.y = sl.initialY + Math.sin(now * 0.002 * sl.speed) * 1.5;
+  }
 
   // Sync Player
   playerGroup.position.set(px, py, pz);
@@ -772,8 +874,8 @@ function animate(now) {
     compLight.intensity = 1.2;
   }
 
-  // Camera follow
-  camera.position.set(px, py + CAM_HEIGHT, pz + CAM_DIST);
+  // Camera Follow with dynamic zoom
+  camera.position.set(px, py + BASE_CAM_HEIGHT * zoomFactor, pz + BASE_CAM_DIST * zoomFactor);
   camera.lookAt(px, py + 1.4, pz);
 
   // Sync Grand Lanterns
