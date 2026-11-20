@@ -147,6 +147,21 @@
     #timer-display.warning { color: #ff5e57; animation: pulse-warn 1s ease infinite; }
     @keyframes pulse-warn { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
 
+    /* ── Live FPS Badge (Top-Right) ── */
+    #fps-badge {
+      margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 11px; font-weight: 600; color: #8e9bb2;
+      display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .fps-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #0be881;
+      box-shadow: 0 0 8px #0be881; display: inline-block;
+    }
+    .fps-dot.warn { background: #ffd32a; box-shadow: 0 0 8px #ffd32a; }
+    .fps-dot.bad { background: #ff5e57; box-shadow: 0 0 8px #ff5e57; }
+    #fps-ms { font-size: 10px; color: #6b7a94; margin-left: 2px; }
+
     /* ── Instructions & Accessibility Bar (Bottom-Center) ── */
     #instructions {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -327,6 +342,10 @@
     <div class="score-label">Điểm số</div>
     <div id="score-val" class="score-num">0</div>
     <div id="timer-display">05:00</div>
+    <div id="fps-badge" title="Tốc độ khung hình thời gian thực">
+      <span class="fps-dot"></span>
+      <span id="fps-num">60</span> FPS <span id="fps-ms">(16.6ms)</span>
+    </div>
   </div>
 
   <!-- Proximity hint -->
@@ -334,6 +353,8 @@
 
   <!-- Instructions & Accessibility Toolbar: bottom-center -->
   <div id="instructions">
+    <div class="key-group"><span class="key">🖱 Chuột</span> Xoay camera</div>
+    <div class="sep"></div>
     <div id="btn-open-controls" class="key btn-action" title="Cài đặt đổi phím điều khiển">⌨ Phím</div>
     <div class="sep"></div>
     <div id="btn-open-lb" class="key btn-action" title="Bảng xếp hạng cục bộ">🏆 BXH</div>

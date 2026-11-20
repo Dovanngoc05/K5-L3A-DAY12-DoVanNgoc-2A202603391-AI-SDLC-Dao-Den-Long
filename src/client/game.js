@@ -40,11 +40,58 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 container.appendChild(renderer.domElement);
 
-// ── Dynamic Camera Zoom Controls ──
+// ── Dynamic Camera Orbit & Zoom Controls ──
+let camYaw = 0;
+let camPitch = 0.535; // Default ~30.7 deg elevation
+let targetCamYaw = 0;
+let targetCamPitch = 0.535;
 let zoomFactor = 1.0;
-addEventListener("wheel", (e) => {
-  zoomFactor = Math.max(0.65, Math.min(2.2, zoomFactor + e.deltaY * 0.001));
+let targetZoom = 1.0;
+
+let isDraggingCam = false;
+let prevPointerX = 0;
+let prevPointerY = 0;
+
+window.addEventListener("pointerdown", (e) => {
+  // Ignore clicks on HUD, modals, or UI overlays
+  if (e.target.closest("#hud, #score-panel, #night-bar, #instructions, #subtitles-banner, #controls-modal, #leaderboard-modal, #game-over-modal, #proximity-hint")) {
+    return;
+  }
+  isDraggingCam = true;
+  prevPointerX = e.clientX;
+  prevPointerY = e.clientY;
+});
+
+window.addEventListener("pointermove", (e) => {
+  if (!isDraggingCam) return;
+  const dx = e.clientX - prevPointerX;
+  const dy = e.clientY - prevPointerY;
+  prevPointerX = e.clientX;
+  prevPointerY = e.clientY;
+
+  targetCamYaw += dx * 0.005;
+  // Clamp pitch so camera never clips into ground or flips upside down (8° to 75°)
+  targetCamPitch = Math.max(0.14, Math.min(1.32, targetCamPitch - dy * 0.004));
+});
+
+window.addEventListener("pointerup", () => {
+  isDraggingCam = false;
+});
+
+window.addEventListener("pointercancel", () => {
+  isDraggingCam = false;
+});
+
+window.addEventListener("wheel", (e) => {
+  targetZoom = Math.max(0.65, Math.min(2.4, targetZoom + e.deltaY * 0.0012));
 }, { passive: true });
+
+// ── Real-Time FPS Tracker ──
+const fpsNumEl = document.getElementById("fps-num");
+const fpsMsEl = document.getElementById("fps-ms");
+const fpsDotEl = document.querySelector("#fps-badge .fps-dot");
+let fpsFrames = 0;
+let fpsLastCalc = performance.now();
 
 // ── Lighting ──
 const ambientLight = new THREE.AmbientLight(0x1c2b50, 0.7);
@@ -1079,7 +1126,7 @@ function animate(now) {
     if (keys[userKeybindings.right] || (userKeybindings.right === "KeyD" && keys["ArrowRight"])) mx += 1;
 
     sim.currentInput.move = [mx, mz];
-    sim.currentInput.cam_yaw_deg = 0;
+    sim.currentInput.cam_yaw_deg = ((camYaw * 180 / Math.PI) % 360 + 360) % 360;
     sim.currentInput.jump = !!keys[userKeybindings.jump];
     sim.currentInput.interact = !!keys[userKeybindings.interact];
     sim.currentInput.pulse = !!keys[userKeybindings.pulse];
@@ -1150,10 +1197,11 @@ function animate(now) {
   // Sync Player
   playerGroup.position.set(px, py, pz);
 
-  const moveX = sim.currentInput.move[0];
-  const moveZ = sim.currentInput.move[1];
-  if (Math.abs(moveX) > 0.01 || Math.abs(moveZ) > 0.01) {
-    playerGroup.rotation.y = Math.atan2(-moveX, -moveZ);
+  if (sim.player.facing_dir) {
+    const [fx, fz] = sim.player.facing_dir;
+    if (Math.abs(fx) > 0.01 || Math.abs(fz) > 0.01) {
+      playerGroup.rotation.y = Math.atan2(-fx, -fz);
+    }
   }
 
   // Bobbing & staff sway
@@ -1182,8 +1230,17 @@ function animate(now) {
     compLight.intensity = 1.2;
   }
 
-  // Camera Follow with dynamic zoom
-  camera.position.set(px, py + BASE_CAM_HEIGHT * zoomFactor, pz + BASE_CAM_DIST * zoomFactor);
+  // Dynamic camera orbit damping and positioning
+  camYaw += (targetCamYaw - camYaw) * 0.12;
+  camPitch += (targetCamPitch - camPitch) * 0.12;
+  zoomFactor += (targetZoom - zoomFactor) * 0.12;
+
+  const camRadius = Math.hypot(BASE_CAM_DIST, BASE_CAM_HEIGHT) * zoomFactor;
+  const camX = px + camRadius * Math.cos(camPitch) * Math.sin(camYaw);
+  const camY = py + camRadius * Math.sin(camPitch) + 1.2;
+  const camZ = pz + camRadius * Math.cos(camPitch) * Math.cos(camYaw);
+
+  camera.position.set(camX, camY, camZ);
   camera.lookAt(px, py + 1.4, pz);
 
   // Sync Grand Lanterns
@@ -1465,6 +1522,21 @@ function animate(now) {
       modalTitle.style.color = "#ff5e57";
     }
     modalScore.textContent = `Điểm số cuối cùng: ${sim.score}`;
+  }
+
+  // Update Real-Time Live FPS Badge
+  fpsFrames++;
+  if (now - fpsLastCalc >= 250) {
+    const elapsed = (now - fpsLastCalc) / 1000;
+    const currentFps = Math.round(fpsFrames / elapsed);
+    const frameMs = (1000 / Math.max(1, currentFps)).toFixed(1);
+    if (fpsNumEl) fpsNumEl.textContent = currentFps;
+    if (fpsMsEl) fpsMsEl.textContent = `(${frameMs}ms)`;
+    if (fpsDotEl) {
+      fpsDotEl.className = "fps-dot" + (currentFps < 30 ? " bad" : currentFps < 55 ? " warn" : "");
+    }
+    fpsFrames = 0;
+    fpsLastCalc = now;
   }
 
   renderer.render(scene, camera);
