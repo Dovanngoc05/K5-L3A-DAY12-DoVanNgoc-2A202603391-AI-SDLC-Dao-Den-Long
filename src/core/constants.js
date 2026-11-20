@@ -193,7 +193,7 @@ export const MAP_CONFIGS = {
     name: "Đảo Chuông",
     duration_s: 300,
     island_radius: 45.0,
-    start_pos: [0.0, 0.0, 0.0],
+    start_pos: [0.0, 6.0, 4.0],
     lanterns: [
       { id: "L1", pos: [0.0, 6.0, 6.0] },
       { id: "L2", pos: [18.0, 3.0, 10.0] },

@@ -162,6 +162,68 @@
     .fps-dot.bad { background: #ff5e57; box-shadow: 0 0 8px #ff5e57; }
     #fps-ms { font-size: 10px; color: #6b7a94; margin-left: 2px; }
 
+    /* ── Minimap & GPS Radar (Bottom-Right) ── */
+    #minimap-panel {
+      position: absolute; bottom: 20px; right: 20px; z-index: 12;
+      background: linear-gradient(160deg, rgba(8, 14, 34, 0.90), rgba(12, 20, 48, 0.84));
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(84, 160, 255, 0.28);
+      border-radius: 14px;
+      padding: 8px 10px 10px 10px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(84, 160, 255, 0.12);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      user-select: none;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .minimap-header {
+      width: 100%; display: flex; justify-content: space-between; align-items: center;
+      padding: 0 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+    }
+    .minimap-title-bar {
+      display: flex; align-items: center; gap: 5px; color: #8e9bb2;
+    }
+    .minimap-pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #0be881;
+      box-shadow: 0 0 8px #0be881; animation: radar-blip 1.5s infinite;
+    }
+    @keyframes radar-blip {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+    .minimap-title { text-transform: uppercase; }
+    .minimap-north {
+      color: #ff5e57; font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+    }
+    .minimap-canvas-wrap {
+      position: relative; width: 160px; height: 160px;
+      border-radius: 50%; overflow: hidden;
+      border: 1.5px solid rgba(84, 160, 255, 0.35);
+      background: radial-gradient(circle, rgba(12, 26, 62, 0.95) 0%, rgba(5, 10, 24, 0.98) 100%);
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
+    }
+    #minimap-canvas {
+      display: block; width: 160px; height: 160px;
+    }
+    .minimap-reticle {
+      position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+      background: radial-gradient(circle, transparent 28%, rgba(84, 160, 255, 0.05) 30%, transparent 32%),
+                  radial-gradient(circle, transparent 62%, rgba(84, 160, 255, 0.06) 64%, transparent 66%);
+      border: 1px solid rgba(84, 160, 255, 0.15);
+    }
+    .gps-badge {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px; padding: 4px 8px; font-size: 10px; font-weight: 600;
+      color: #c8d0de; font-variant-numeric: tabular-nums; width: 100%; box-sizing: border-box;
+    }
+    .gps-pin { font-size: 11px; }
+    #gps-coords { letter-spacing: 0.2px; font-family: monospace; }
+    .gps-tier-pill {
+      font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+      background: rgba(11, 232, 129, 0.2); color: #0be881; border: 1px solid rgba(11, 232, 129, 0.35);
+      text-transform: uppercase; margin-left: auto;
+    }
+
     /* ── Instructions & Accessibility Bar (Bottom-Center) ── */
     #instructions {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -680,6 +742,26 @@
     <div id="fps-badge" title="Tốc độ khung hình thời gian thực">
       <span class="fps-dot"></span>
       <span id="fps-num">60</span> FPS <span id="fps-ms">(16.6ms)</span>
+    </div>
+  </div>
+
+  <!-- Minimap & Real-Time GPS (Bottom-Right) -->
+  <div id="minimap-panel">
+    <div class="minimap-header">
+      <div class="minimap-title-bar">
+        <span class="minimap-pulse-dot"></span>
+        <span class="minimap-title">RADAR / ĐỊNH VỊ</span>
+      </div>
+      <div class="minimap-north" title="Hướng Bắc">▲ BẮC</div>
+    </div>
+    <div class="minimap-canvas-wrap">
+      <canvas id="minimap-canvas" width="160" height="160"></canvas>
+      <div class="minimap-reticle"></div>
+    </div>
+    <div id="gps-display" class="gps-badge" title="Tọa độ không gian 3 chiều và tầng hiện tại">
+      <span class="gps-pin">📍</span>
+      <span id="gps-coords">X: 0.0 · Z: 0.0 · Y: 0.0</span>
+      <span id="gps-tier-tag" class="gps-tier-pill">T0</span>
     </div>
   </div>
 

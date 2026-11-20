@@ -36,6 +36,8 @@ window.launchGame = function (n) {
     if (scoreEl) scoreEl.style.display = "block";
     const instEl = document.getElementById("instructions");
     if (instEl) instEl.style.display = "flex";
+    const minimapEl = document.getElementById("minimap-panel");
+    if (minimapEl) minimapEl.style.display = "flex";
     if (sfx) sfx.init();
   }
 };
@@ -52,6 +54,8 @@ window.returnToHome = function () {
   if (scoreEl) scoreEl.style.display = "none";
   const instEl = document.getElementById("instructions");
   if (instEl) instEl.style.display = "none";
+  const minimapEl = document.getElementById("minimap-panel");
+  if (minimapEl) minimapEl.style.display = "none";
   const pauseEl = document.getElementById("pause-overlay");
   if (pauseEl) pauseEl.style.display = "none";
   const overEl = document.getElementById("game-over-modal");
@@ -73,6 +77,8 @@ if (inMenuMode) {
   if (scoreEl) scoreEl.style.display = "none";
   const instEl = document.getElementById("instructions");
   if (instEl) instEl.style.display = "none";
+  const minimapEl = document.getElementById("minimap-panel");
+  if (minimapEl) minimapEl.style.display = "none";
 }
 
 const mapTitleEl = document.getElementById("map-title");
@@ -110,7 +116,7 @@ let prevPointerY = 0;
 window.addEventListener("pointerdown", (e) => {
   if (inMenuMode) return;
   // Ignore clicks on HUD, modals, or UI overlays
-  if (e.target.closest("#home-screen, #hud, #score-panel, #night-bar, #instructions, #subtitles-banner, #controls-modal, #leaderboard-modal, #game-over-modal, #proximity-hint, #pause-overlay")) {
+  if (e.target.closest("#home-screen, #hud, #score-panel, #night-bar, #instructions, #subtitles-banner, #controls-modal, #leaderboard-modal, #game-over-modal, #proximity-hint, #pause-overlay, #minimap-panel")) {
     return;
   }
   isDraggingCam = true;
@@ -438,7 +444,7 @@ function buildNight2Map() {
 }
 
 function buildNight3Map() {
-  // Tier 0: Disc R=45 at Y=0
+  // Tier 0: Ground Disc R=45 at Y=0
   const land0 = new THREE.Mesh(new THREE.CylinderGeometry(45, 52, 5, 64), cliffMat);
   land0.position.y = -2.5;
   land0.receiveShadow = true;
@@ -450,23 +456,46 @@ function buildNight3Map() {
   grass0.receiveShadow = true;
   islandGroup.add(grass0);
 
-  // Tier 1: Annular ring 12 <= r <= 24, z > 0 at Y=3
+  // Tier 1: Annular plateau 12 <= r <= 24, z >= 0 at Y=3.0
   const t1Group = new THREE.Group();
   t1Group.position.set(0, 1.5, 0);
+
+  // Tier 1 Grass top surface (z >= 0)
   const ringGeo = new THREE.RingGeometry(12, 24, 48, 1, 0, Math.PI);
   const ringMesh = new THREE.Mesh(ringGeo, grassMat);
   ringMesh.rotation.x = -Math.PI / 2;
   ringMesh.position.y = 1.51;
+  ringMesh.receiveShadow = true;
   t1Group.add(ringMesh);
 
-  // Tier 1 Cliff walls
-  const wallGeo = new THREE.CylinderGeometry(24, 24, 3, 48, 1, true, 0, Math.PI);
-  const wallMesh = new THREE.Mesh(wallGeo, cliffMat);
-  t1Group.add(wallMesh);
+  // Tier 1 Outer Cliff wall (R=24, height=3, covering z >= 0)
+  const outerWallGeo = new THREE.CylinderGeometry(24, 24, 3, 48, 1, true, Math.PI * 0.5, Math.PI);
+  const outerWallMesh = new THREE.Mesh(outerWallGeo, cliffMat);
+  outerWallMesh.receiveShadow = true;
+  t1Group.add(outerWallMesh);
+
+  // Tier 1 Inner Cliff wall (R=12, height=3, covering z >= 0)
+  const innerWallGeo = new THREE.CylinderGeometry(12, 12, 3, 32, 1, true, Math.PI * 0.5, Math.PI);
+  const innerWallMesh = new THREE.Mesh(innerWallGeo, cliffMat);
+  innerWallMesh.receiveShadow = true;
+  t1Group.add(innerWallMesh);
+
+  // Tier 1 Side caps at z=0 (closing the half-ring plateau with stone embankment)
+  const capGeo = new THREE.BoxGeometry(12, 3, 0.4);
+  const capLeft = new THREE.Mesh(capGeo, stoneMat);
+  capLeft.position.set(-18, 0, 0);
+  capLeft.receiveShadow = true;
+  t1Group.add(capLeft);
+
+  const capRight = new THREE.Mesh(capGeo, stoneMat);
+  capRight.position.set(18, 0, 0);
+  capRight.receiveShadow = true;
+  t1Group.add(capRight);
+
   islandGroup.add(t1Group);
 
-  // Tier 2: Disc R=8 at Y=6
-  const t2Land = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 6, 32), cliffMat);
+  // Tier 2: Disc R=8 at Y=6.0
+  const t2Land = new THREE.Mesh(new THREE.CylinderGeometry(8, 8.5, 6, 32), cliffMat);
   t2Land.position.y = 3.0;
   t2Land.receiveShadow = true;
   islandGroup.add(t2Land);
@@ -477,27 +506,78 @@ function buildNight3Map() {
   t2Grass.receiveShadow = true;
   islandGroup.add(t2Grass);
 
-  // Bell Tower at center of Tier 2: Height 8m, R=2m
-  const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, 8, 16), stoneMat);
-  tower.position.set(0, 10, 0);
-  tower.castShadow = true;
-  islandGroup.add(tower);
+  // Central Bell Tower Pavilion (Tháp Chuông Đảo Chuông: R=2m, height 8m on Tier 2)
+  const towerGroup = new THREE.Group();
+  towerGroup.position.set(0, 6.0, 0);
 
-  // Golden Bell inside tower
-  const bell = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.4, 12), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.8, roughness: 0.3 }));
-  bell.position.set(0, 12, 0);
-  islandGroup.add(bell);
+  // 4 Robust Stone Pillars
+  const colMat = new THREE.MeshStandardMaterial({ color: 0x485460, roughness: 0.75 });
+  for (let i = 0; i < 4; i++) {
+    const ang = (i * Math.PI) / 2 + Math.PI / 4;
+    const px = Math.cos(ang) * 1.5;
+    const pz = Math.sin(ang) * 1.5;
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 7.2, 12), colMat);
+    col.position.set(px, 3.6, pz);
+    col.castShadow = true;
+    towerGroup.add(col);
+  }
 
-  // Radial ramps at 30 deg and 150 deg (from r=30 Y=0 to r=24 Y=3)
+  // Stone plinth base
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.3, 0.6, 16), stoneMat);
+  plinth.position.y = 0.3;
+  plinth.receiveShadow = true;
+  towerGroup.add(plinth);
+
+  // Multi-tier Traditional Curved Roof
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xeb3b5a, roughness: 0.55 });
+  const roofLower = new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.2, 4), roofMat);
+  roofLower.position.y = 7.4;
+  roofLower.rotation.y = Math.PI / 4;
+  roofLower.castShadow = true;
+  towerGroup.add(roofLower);
+
+  const roofUpper = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.0, 4), roofMat);
+  roofUpper.position.y = 8.2;
+  roofUpper.rotation.y = Math.PI / 4;
+  roofUpper.castShadow = true;
+  towerGroup.add(roofUpper);
+
+  // Golden Finial / Spire
+  const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.25 }));
+  spire.position.y = 9.3;
+  towerGroup.add(spire);
+
+  // Great Golden Ceremonial Bell suspended inside
+  const bell = new THREE.Mesh(new THREE.ConeGeometry(0.85, 1.6, 16), new THREE.MeshStandardMaterial({ color: 0xffd32a, metalness: 0.85, roughness: 0.2 }));
+  bell.position.set(0, 4.4, 0);
+  bell.castShadow = true;
+  towerGroup.add(bell);
+
+  islandGroup.add(towerGroup);
+
+  // Radial Stone Ramps at 30 deg and 150 deg (connecting Tier 0 R=30 Y=0 to Tier 1 R=24 Y=3)
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x576574, roughness: 0.8 });
   for (const deg of [30, 150]) {
     const rad = (deg * Math.PI) / 180;
     const rampGroup = new THREE.Group();
     rampGroup.position.set(Math.cos(rad) * 27, 1.5, Math.sin(rad) * 27);
-    rampGroup.rotation.y = -rad;
-    const ramp = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 6.5), stoneMat);
-    ramp.rotation.x = -0.45;
+    rampGroup.lookAt(0, 1.5, 0); // Local -Z points inward toward island center
+
+    // Main ramp slab: slope angle atan(3/6) ~ 0.4636 rad
+    const ramp = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.25, 6.75), stoneMat);
+    ramp.rotation.x = 0.4636;
     ramp.receiveShadow = true;
     rampGroup.add(ramp);
+
+    // Stone guardrails on both sides of the ramp
+    for (const side of [-1.8, 1.8]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.5, 6.75), railMat);
+      rail.position.set(side, 0.35, 0);
+      rail.rotation.x = 0.4636;
+      rail.receiveShadow = true;
+      rampGroup.add(rail);
+    }
+
     islandGroup.add(rampGroup);
   }
 }
@@ -518,6 +598,7 @@ const pillarVermilionMat = new THREE.MeshStandardMaterial({ color: 0xeb3b5a, rou
 const pillarStoneMat = new THREE.MeshStandardMaterial({ color: 0x485460, roughness: 0.8 });
 
 for (const obs of sim.obstacles) {
+  if (obs.type === "tower") continue; // Tower already built with bespoke pavilion architecture in buildNight3Map()
   const oGroup = new THREE.Group();
   oGroup.position.set(obs.pos[0], obs.pos[1], obs.pos[2]);
 
@@ -1474,6 +1555,329 @@ function updateFlamesUI() {
 }
 updateFlamesUI();
 
+// ── Real-Time Minimap & GPS Positioning Radar ──
+const minimapCanvas = document.getElementById("minimap-canvas");
+const minimapCtx = minimapCanvas ? minimapCanvas.getContext("2d") : null;
+const gpsCoordsEl = document.getElementById("gps-coords");
+const gpsTierEl = document.getElementById("gps-tier-tag");
+
+function updateMinimap(now, px, py, pz) {
+  if (!minimapCtx || !minimapCanvas) return;
+  const W = minimapCanvas.width;
+  const H = minimapCanvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  let originX = 0;
+  let originZ = 0;
+  let scale = 1.6;
+
+  if (currentNight === 1) {
+    originX = 0;
+    originZ = 0;
+    scale = 1.65;
+  } else if (currentNight === 2) {
+    originX = 35;
+    originZ = 0;
+    scale = 1.05;
+  } else if (currentNight === 3) {
+    originX = 0;
+    originZ = 0;
+    scale = 1.5;
+  }
+
+  const toU = (x) => cx + (x - originX) * scale;
+  const toV = (z) => cy + (z - originZ) * scale;
+
+  // Clear canvas
+  minimapCtx.clearRect(0, 0, W, H);
+
+  // Circular radar viewport mask
+  minimapCtx.save();
+  minimapCtx.beginPath();
+  minimapCtx.arc(cx, cy, 76, 0, Math.PI * 2);
+  minimapCtx.clip();
+
+  // Draw concentric radar range rings & crosshair
+  minimapCtx.strokeStyle = "rgba(84, 160, 255, 0.12)";
+  minimapCtx.lineWidth = 1;
+  for (const r of [25, 50, 72]) {
+    minimapCtx.beginPath();
+    minimapCtx.arc(cx, cy, r, 0, Math.PI * 2);
+    minimapCtx.stroke();
+  }
+  minimapCtx.beginPath();
+  minimapCtx.moveTo(cx, cy - 74);
+  minimapCtx.lineTo(cx, cy + 74);
+  minimapCtx.moveTo(cx - 74, cy);
+  minimapCtx.lineTo(cx + 74, cy);
+  minimapCtx.stroke();
+
+  // 1. Draw Island Terrain Layout
+  if (currentNight === 1) {
+    // Single circular island R=40
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(0), toV(0), 40 * scale, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "rgba(22, 58, 42, 0.65)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(38, 222, 129, 0.5)";
+    minimapCtx.lineWidth = 1.5;
+    minimapCtx.stroke();
+  } else if (currentNight === 2) {
+    // Bridge between Island A and B
+    minimapCtx.fillStyle = "rgba(180, 150, 100, 0.5)";
+    minimapCtx.fillRect(toU(25), toV(-2.2), 20 * scale, 4.4 * scale);
+
+    // Island A (cx = 0, R = 28)
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(0), toV(0), 28 * scale, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "rgba(22, 58, 42, 0.65)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(38, 222, 129, 0.5)";
+    minimapCtx.lineWidth = 1.5;
+    minimapCtx.stroke();
+
+    // Island B (cx = 70, R = 28)
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(70), toV(0), 28 * scale, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "rgba(22, 58, 42, 0.65)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(38, 222, 129, 0.5)";
+    minimapCtx.lineWidth = 1.5;
+    minimapCtx.stroke();
+  } else if (currentNight === 3) {
+    // Tier 0 (R=45)
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(0), toV(0), 45 * scale, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "rgba(18, 44, 34, 0.6)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(38, 222, 129, 0.4)";
+    minimapCtx.lineWidth = 1.2;
+    minimapCtx.stroke();
+
+    // Tier 1 (12 <= R <= 24, Z >= 0)
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(0), toV(0), 24 * scale, 0, Math.PI, false);
+    minimapCtx.arc(toU(0), toV(0), 12 * scale, Math.PI, 0, true);
+    minimapCtx.closePath();
+    minimapCtx.fillStyle = "rgba(32, 90, 65, 0.75)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(46, 213, 115, 0.6)";
+    minimapCtx.lineWidth = 1.2;
+    minimapCtx.stroke();
+
+    // Radial ramps at 30 deg and 150 deg
+    for (const deg of [30, 150]) {
+      const rad = (deg * Math.PI) / 180;
+      const rx1 = Math.cos(rad) * 24;
+      const rz1 = Math.sin(rad) * 24;
+      const rx2 = Math.cos(rad) * 30;
+      const rz2 = Math.sin(rad) * 30;
+      minimapCtx.beginPath();
+      minimapCtx.moveTo(toU(rx1), toV(rz1));
+      minimapCtx.lineTo(toU(rx2), toV(rz2));
+      minimapCtx.strokeStyle = "rgba(255, 234, 167, 0.85)";
+      minimapCtx.lineWidth = 3;
+      minimapCtx.stroke();
+    }
+
+    // Tier 2 Disc (R=8)
+    minimapCtx.beginPath();
+    minimapCtx.arc(toU(0), toV(0), 8 * scale, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "rgba(45, 120, 90, 0.85)";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "rgba(255, 211, 42, 0.8)";
+    minimapCtx.lineWidth = 1.5;
+    minimapCtx.stroke();
+
+    // Bell Tower icon at (0,0)
+    minimapCtx.fillStyle = "#eb3b5a";
+    minimapCtx.fillRect(toU(0) - 2.5, toV(0) - 2.5, 5, 5);
+  }
+
+  // 2. Obstacles (rocks/trees)
+  if (sim.obstacles) {
+    for (const obs of sim.obstacles) {
+      if (obs.type === "tower") continue;
+      const ox = toU(obs.pos[0]);
+      const oz = toV(obs.pos[2]);
+      minimapCtx.beginPath();
+      minimapCtx.arc(ox, oz, Math.max(1.2, obs.radius * scale), 0, Math.PI * 2);
+      minimapCtx.fillStyle = obs.type === "tree" ? "rgba(15, 43, 29, 0.8)" : "rgba(80, 90, 105, 0.8)";
+      minimapCtx.fill();
+    }
+  }
+
+  // 3. Jump Pads
+  for (const jp of sim.jump_pads) {
+    const ju = toU(jp.pos[0]);
+    const jv = toV(jp.pos[2]);
+    minimapCtx.beginPath();
+    minimapCtx.arc(ju, jv, 3.5, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "#00d2d3";
+    minimapCtx.fill();
+    minimapCtx.strokeStyle = "#ffffff";
+    minimapCtx.lineWidth = 1;
+    minimapCtx.stroke();
+  }
+
+  // 4. Charms
+  for (const c of sim.charms) {
+    if (c.available) {
+      const cu = toU(c.pos[0]);
+      const cv = toV(c.pos[2]);
+      minimapCtx.beginPath();
+      minimapCtx.arc(cu, cv, 3, 0, Math.PI * 2);
+      minimapCtx.fillStyle = "#eb4d4b";
+      minimapCtx.fill();
+      minimapCtx.strokeStyle = "#ffd32a";
+      minimapCtx.lineWidth = 1;
+      minimapCtx.stroke();
+    }
+  }
+
+  // 5. Motes (Đom đóm)
+  minimapCtx.fillStyle = "rgba(255, 234, 167, 0.65)";
+  for (const m of sim.motes) {
+    const mu = toU(m.pos[0]);
+    const mv = toV(m.pos[2]);
+    minimapCtx.fillRect(mu - 0.75, mv - 0.75, 1.5, 1.5);
+  }
+
+  // 6. Grand Lanterns
+  for (const l of sim.lanterns) {
+    const lu = toU(l.pos[0]);
+    const lv = toV(l.pos[2]);
+
+    if (l.lit) {
+      // Safe Zone Circle (6m)
+      if (l.fuel >= 30) {
+        minimapCtx.beginPath();
+        minimapCtx.arc(lu, lv, 6.0 * scale, 0, Math.PI * 2);
+        minimapCtx.fillStyle = "rgba(11, 232, 129, 0.12)";
+        minimapCtx.fill();
+        minimapCtx.strokeStyle = "rgba(11, 232, 129, 0.4)";
+        minimapCtx.lineWidth = 1;
+        minimapCtx.stroke();
+      }
+
+      // Low fuel warning blink (< 30 fuel)
+      const isWeak = l.fuel < 30;
+      const blink = isWeak ? Math.sin(now * 0.00628) > 0 : true;
+
+      minimapCtx.beginPath();
+      minimapCtx.arc(lu, lv, 4, 0, Math.PI * 2);
+      minimapCtx.fillStyle = isWeak ? (blink ? "#ff5e57" : "#ff9f43") : "#0be881";
+      minimapCtx.fill();
+      minimapCtx.strokeStyle = "#ffffff";
+      minimapCtx.lineWidth = 1.2;
+      minimapCtx.stroke();
+
+      if (isWeak && blink) {
+        minimapCtx.beginPath();
+        minimapCtx.arc(lu, lv, 7, 0, Math.PI * 2);
+        minimapCtx.strokeStyle = "#ff5e57";
+        minimapCtx.lineWidth = 1;
+        minimapCtx.stroke();
+      }
+    } else {
+      // Unlit lantern (square)
+      minimapCtx.beginPath();
+      minimapCtx.rect(lu - 3, lv - 3, 6, 6);
+      minimapCtx.fillStyle = "#ffd32a";
+      minimapCtx.fill();
+      minimapCtx.strokeStyle = "#030610";
+      minimapCtx.lineWidth = 1;
+      minimapCtx.stroke();
+    }
+
+    // Lantern ID label
+    minimapCtx.font = "bold 8px monospace";
+    minimapCtx.fillStyle = "#ffffff";
+    minimapCtx.fillText(l.id, lu + 4, lv - 3);
+  }
+
+  // 7. Enemies (Bóng Mực & Gió Lạc)
+  for (const s of sim.shades) {
+    const su = toU(s.pos[0]);
+    const sv = toV(s.pos[2]);
+    minimapCtx.beginPath();
+    minimapCtx.arc(su, sv, s.state === "drain" ? 3.5 : 2.5, 0, Math.PI * 2);
+    minimapCtx.fillStyle = s.state === "drain" ? "#eb3b5a" : (s.state === "chase" ? "#ff4757" : "#8854d0");
+    minimapCtx.fill();
+
+    if (s.state === "drain") {
+      minimapCtx.strokeStyle = "#ffffff";
+      minimapCtx.lineWidth = 1;
+      minimapCtx.stroke();
+    }
+  }
+
+  for (const d of sim.drifters) {
+    const du = toU(d.pos[0]);
+    const dv = toV(d.pos[2]);
+    minimapCtx.beginPath();
+    minimapCtx.arc(du, dv, 2.5, 0, Math.PI * 2);
+    minimapCtx.fillStyle = "#4bcffa";
+    minimapCtx.fill();
+  }
+
+  // 8. Player (Mây) with Orientation Chevron & Vision Arc
+  const pu = toU(px);
+  const pv = toV(pz);
+
+  let facingAngle = Math.PI * 0.5;
+  if (sim.player.facing_dir && (Math.abs(sim.player.facing_dir[0]) > 0.01 || Math.abs(sim.player.facing_dir[1]) > 0.01)) {
+    facingAngle = Math.atan2(sim.player.facing_dir[1], sim.player.facing_dir[0]);
+  }
+
+  // Vision cone
+  minimapCtx.beginPath();
+  minimapCtx.moveTo(pu, pv);
+  minimapCtx.arc(pu, pv, 14, facingAngle - 0.45, facingAngle + 0.45);
+  minimapCtx.closePath();
+  minimapCtx.fillStyle = "rgba(255, 211, 42, 0.22)";
+  minimapCtx.fill();
+
+  // Heading pointer chevron
+  minimapCtx.save();
+  minimapCtx.translate(pu, pv);
+  minimapCtx.rotate(facingAngle);
+  minimapCtx.beginPath();
+  minimapCtx.moveTo(6, 0);
+  minimapCtx.lineTo(-4, -4);
+  minimapCtx.lineTo(-2, 0);
+  minimapCtx.lineTo(-4, 4);
+  minimapCtx.closePath();
+  minimapCtx.fillStyle = "#ffd32a";
+  minimapCtx.fill();
+  minimapCtx.strokeStyle = "#ffffff";
+  minimapCtx.lineWidth = 1;
+  minimapCtx.stroke();
+  minimapCtx.restore();
+
+  minimapCtx.restore();
+
+  // 9. Update GPS Readout and Elevation / Zone Tag
+  if (gpsCoordsEl) {
+    gpsCoordsEl.textContent = `X:${px.toFixed(1)} · Z:${pz.toFixed(1)} · Y:${py.toFixed(1)}`;
+  }
+  if (gpsTierEl) {
+    let tierText = "T0";
+    if (currentNight === 1) {
+      tierText = "ĐẢO BẾN";
+    } else if (currentNight === 2) {
+      tierText = px < 35 ? "ĐẢO A" : "ĐẢO B";
+    } else if (currentNight === 3) {
+      const r = Math.hypot(px, pz);
+      if (r <= 8.0) tierText = "T2 (6m)";
+      else if (r >= 12.0 && r <= 24.0 && pz > 0) tierText = "T1 (3m)";
+      else tierText = "T0 (0m)";
+    }
+    gpsTierEl.textContent = tierText;
+  }
+}
+
 // ── Fixed Timestep Game Loop (60Hz) ──
 let accumulator = 0;
 let lastTime = performance.now();
@@ -1931,6 +2335,9 @@ function animate(now) {
 
   // Update Real-Time Live FPS Badge
   updateFpsBadge(now);
+
+  // Update Real-Time Minimap & GPS
+  updateMinimap(now, px, py, pz);
 
   renderer.render(scene, camera);
 }
