@@ -1109,6 +1109,18 @@ if (motionToggleBtn) {
   });
 }
 
+// ── Colorblind Mode ──
+let colorblindMode = false;
+const cbToggleBtn = document.getElementById("cb-toggle");
+if (cbToggleBtn) {
+  cbToggleBtn.addEventListener("click", () => {
+    colorblindMode = !colorblindMode;
+    cbToggleBtn.textContent = colorblindMode ? "👁 Mù màu: BẬT" : "👁 Mù màu: Tắt";
+    cbToggleBtn.style.color = colorblindMode ? "#00B3FF" : "#c8d0de";
+    document.body.classList.toggle("colorblind", colorblindMode);
+  });
+}
+
 // ── Leaderboard UI & API ──
 const lbModal = document.getElementById("leaderboard-modal");
 const btnOpenLb = document.getElementById("btn-open-lb");
@@ -1403,18 +1415,7 @@ if (btnSaveScore && playerNameInput) {
   });
 }
 
-// ── Colorblind Mode & Drain Tethers ──
-let colorblindMode = false;
-const cbToggleBtn = document.getElementById("cb-toggle");
-if (cbToggleBtn) {
-  cbToggleBtn.addEventListener("click", () => {
-    colorblindMode = !colorblindMode;
-    cbToggleBtn.textContent = colorblindMode ? "👁 Mù màu: BẬT" : "👁 Mù màu: Tắt";
-    cbToggleBtn.style.color = colorblindMode ? "#00B3FF" : "#c8d0de";
-    document.body.classList.toggle("colorblind", colorblindMode);
-  });
-}
-
+// ── Drain Tethers ──
 const drainTethers = new Map();
 const edgeIndicatorsContainer = document.getElementById("edge-indicators");
 
