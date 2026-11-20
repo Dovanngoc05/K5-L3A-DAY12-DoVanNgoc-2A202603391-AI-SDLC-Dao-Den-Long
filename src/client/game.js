@@ -442,8 +442,47 @@ for (const l of sim.lanterns) {
   safeRing.position.y = 0.05;
   lGroup.add(safeRing);
 
+  // Floating Fuel Bar above lantern
+  const fuelBarGroup = new THREE.Group();
+  fuelBarGroup.position.set(0, 4.3, 0);
+
+  const fuelBg = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.6, 0.24),
+    new THREE.MeshBasicMaterial({ color: 0x111625, side: THREE.DoubleSide })
+  );
+  fuelBarGroup.add(fuelBg);
+
+  const fuelFillMat = new THREE.MeshBasicMaterial({ color: 0x0be881, side: THREE.DoubleSide });
+  const fuelFill = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.5, 0.18),
+    fuelFillMat
+  );
+  fuelFill.position.z = 0.01;
+  fuelBarGroup.add(fuelFill);
+  fuelBarGroup.visible = false;
+  lGroup.add(fuelBarGroup);
+
+  // Tear shape / water droplet marker for colorblind unlit state
+  const tearGeo = new THREE.ConeGeometry(0.25, 0.5, 8);
+  const tearMat = new THREE.MeshBasicMaterial({ color: 0x00b3ff, wireframe: true });
+  const tearMarker = new THREE.Mesh(tearGeo, tearMat);
+  tearMarker.position.set(0, 4.0, 0);
+  tearMarker.rotation.x = Math.PI;
+  tearMarker.visible = false;
+  lGroup.add(tearMarker);
+
   scene.add(lGroup);
-  lanternVisuals.set(l.id, { lGroup, chamberMat, fireMat, lLight, safeRingMat });
+  lanternVisuals.set(l.id, {
+    lGroup,
+    chamberMat,
+    fireMat,
+    lLight,
+    safeRingMat,
+    fuelBarGroup,
+    fuelFill,
+    fuelFillMat,
+    tearMarker
+  });
 }
 
 // ── Player "Mây" (Character Model) ──
@@ -707,6 +746,20 @@ if (soundToggleBtn) {
   });
 }
 
+// ── Phase 3: Colorblind Mode & Drain Tethers ──
+let colorblindMode = false;
+const cbToggleBtn = document.getElementById("cb-toggle");
+if (cbToggleBtn) {
+  cbToggleBtn.addEventListener("click", () => {
+    colorblindMode = !colorblindMode;
+    cbToggleBtn.textContent = colorblindMode ? "👁 Mù màu: BẬT" : "👁 Mù màu: Tắt";
+    cbToggleBtn.style.color = colorblindMode ? "#00B3FF" : "#c8d0de";
+    document.body.classList.toggle("colorblind", colorblindMode);
+  });
+}
+
+const drainTethers = new Map();
+
 // ── Input Handling ──
 const keys = {};
 addEventListener("keydown", (e) => {
@@ -882,15 +935,59 @@ function animate(now) {
   for (const l of sim.lanterns) {
     const visual = lanternVisuals.get(l.id);
     if (!visual) continue;
+
+    // Billboard fuel gauge to camera
+    if (visual.fuelBarGroup) {
+      visual.fuelBarGroup.quaternion.copy(camera.quaternion);
+    }
+
     if (l.lit) {
+      visual.fuelBarGroup.visible = true;
+      const fuelPct = Math.max(0, Math.min(1.0, l.fuel / 100));
+      visual.fuelFill.scale.x = fuelPct;
+      visual.fuelFill.position.x = -0.75 * (1 - fuelPct);
+
+      // Low fuel blink (< 30) at 1 Hz
+      const isLowFuel = l.fuel < 30;
+      const blink = isLowFuel ? Math.sin(now * 0.00628) > 0 : true;
+
+      if (isLowFuel) {
+        visual.fuelFillMat.color.setHex(colorblindMode ? 0xffffff : 0xff5e57);
+      } else if (l.fuel < 60) {
+        visual.fuelFillMat.color.setHex(0xffd32a);
+      } else {
+        visual.fuelFillMat.color.setHex(0x0be881);
+      }
+
       visual.chamberMat.color.setHex(0xffbe76);
-      visual.fireMat.opacity = 0.85 + Math.sin(now * 0.008) * 0.15;
-      visual.lLight.intensity = 3.0 + Math.sin(now * 0.006) * 0.6;
-      visual.safeRingMat.opacity = 0.5 + Math.sin(now * 0.004) * 0.15;
+      visual.fireMat.opacity = blink ? (0.85 + Math.sin(now * 0.008) * 0.15) : 0.2;
+      visual.lLight.intensity = blink ? (3.0 + Math.sin(now * 0.006) * 0.6) : 0.4;
+      visual.fuelBarGroup.visible = blink;
+
+      // Safe ring active ONLY if fuel >= 30
+      if (l.fuel >= 30) {
+        visual.safeRingMat.opacity = 0.5 + Math.sin(now * 0.004) * 0.15;
+      } else {
+        visual.safeRingMat.opacity = 0;
+      }
+
+      visual.lGroup.scale.set(1.0, 1.0, 1.0);
+      visual.tearMarker.visible = false;
     } else {
-      visual.fireMat.opacity = (l.deposited / sim.tuning.lantern_cost) * 0.4;
-      visual.lLight.intensity = (l.deposited / sim.tuning.lantern_cost) * 0.8;
+      visual.fuelBarGroup.visible = false;
+      const cost = l.ever_lit ? sim.tuning.relight_cost : sim.tuning.lantern_cost;
+      visual.fireMat.opacity = (l.deposited / cost) * 0.4;
+      visual.lLight.intensity = (l.deposited / cost) * 0.8;
       visual.safeRingMat.opacity = 0;
+
+      // Colorblind mode: Unlit lantern is squashed 20% on Y and shows tear texture / marker
+      if (colorblindMode) {
+        visual.lGroup.scale.set(1.0, 0.8, 1.0);
+        visual.tearMarker.visible = true;
+      } else {
+        visual.lGroup.scale.set(1.0, 1.0, 1.0);
+        visual.tearMarker.visible = false;
+      }
     }
   }
 
@@ -911,7 +1008,15 @@ function animate(now) {
     grp.rotation.y = now * 0.003;
   }
 
-  // Sync Shades
+  // Sync Shades & Drain Tethers
+  const currentShadeIds = new Set(sim.shades.map((s) => s.id));
+  for (const [shadeId, tether] of drainTethers.entries()) {
+    if (!currentShadeIds.has(shadeId)) {
+      scene.remove(tether);
+      drainTethers.delete(shadeId);
+    }
+  }
+
   for (const s of sim.shades) {
     const obj = getOrCreateShade(s);
     obj.grp.position.set(s.pos[0], s.pos[1] + 0.75, s.pos[2]);
@@ -920,16 +1025,46 @@ function animate(now) {
     const dz = pz - s.pos[2];
     obj.grp.rotation.y = Math.atan2(dx, dz);
 
+    // Drain tether visual
+    if (s.state === "drain" && s.target_lantern_id) {
+      const tLantern = sim.lanterns.find((l) => l.id === s.target_lantern_id);
+      if (tLantern) {
+        let tether = drainTethers.get(s.id);
+        if (!tether) {
+          const tGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(s.pos[0], s.pos[1] + 0.75, s.pos[2]),
+            new THREE.Vector3(tLantern.pos[0], tLantern.pos[1] + 2.45, tLantern.pos[2])
+          ]);
+          const tMat = new THREE.LineBasicMaterial({
+            color: colorblindMode ? 0x00b3ff : 0x8e44ad,
+            linewidth: 3
+          });
+          tether = new THREE.Line(tGeo, tMat);
+          scene.add(tether);
+          drainTethers.set(s.id, tether);
+        }
+        tether.visible = true;
+        const posAttr = tether.geometry.attributes.position;
+        posAttr.setXYZ(0, s.pos[0], s.pos[1] + 0.75, s.pos[2]);
+        posAttr.setXYZ(1, tLantern.pos[0], tLantern.pos[1] + 2.45, tLantern.pos[2]);
+        posAttr.needsUpdate = true;
+        tether.material.color.setHex(colorblindMode ? 0x00b3ff : 0x8e44ad);
+      }
+    } else {
+      const tether = drainTethers.get(s.id);
+      if (tether) tether.visible = false;
+    }
+
     if (s.state === "stunned") {
       obj.coreMat.color.setHex(0x3867d6);
-      obj.eyeMat.color.setHex(0x4bcffa);
-      obj.auraMat.color.setHex(0x0fbcf9);
+      obj.eyeMat.color.setHex(colorblindMode ? 0x00b3ff : 0x4bcffa);
+      obj.auraMat.color.setHex(colorblindMode ? 0x00b3ff : 0x0fbcf9);
       obj.auraMat.opacity = 0.35;
       obj.grp.position.x += (Math.random() - 0.5) * 0.08;
     } else {
       obj.coreMat.color.setHex(0x020202);
-      obj.eyeMat.color.setHex(0xff3838);
-      obj.auraMat.color.setHex(0x220033);
+      obj.eyeMat.color.setHex(colorblindMode ? 0x00b3ff : 0xff3838);
+      obj.auraMat.color.setHex(colorblindMode ? 0x00b3ff : (s.state === "drain" ? 0x8e44ad : 0x220033));
       obj.auraMat.opacity = 0.25 + Math.sin(now * 0.006) * 0.08;
     }
   }
@@ -951,26 +1086,37 @@ function animate(now) {
   }
 
   // Proximity Hint
-  let nearLantern = false;
+  let hintText = "";
   for (const l of sim.lanterns) {
-    if (l.lit) continue;
     const d = Math.hypot(px - l.pos[0], pz - l.pos[2]);
-    if (d <= sim.tuning.interact_radius + 1.0) {
-      nearLantern = true;
-      break;
+    if (d <= sim.tuning.interact_radius + 0.5) {
+      if (!l.lit && sim.player.carried > 0) {
+        const cost = l.ever_lit ? sim.tuning.relight_cost : sim.tuning.lantern_cost;
+        hintText = `Nhấn <span class="key" style="display:inline-flex;margin:0 2px;">E</span> để thắp đèn (${l.deposited}/${cost})`;
+        break;
+      } else if (l.lit && l.fuel < 100 && sim.player.carried > 0) {
+        hintText = `Nhấn <span class="key" style="display:inline-flex;margin:0 2px;">E</span> để châm dầu (Dầu: ${Math.round(l.fuel)}%)`;
+        break;
+      }
     }
   }
-  proximityHint.style.display = nearLantern && sim.player.carried > 0 ? "block" : "none";
+  if (hintText) {
+    proximityHint.innerHTML = hintText;
+    proximityHint.style.display = "block";
+  } else {
+    proximityHint.style.display = "none";
+  }
 
   // Update HUD
   updateFlamesUI();
-  const cap = sim.tuning.carry_capacity;
+  const cap = sim.capacity;
   carriedVal.textContent = `${sim.player.carried}/${cap}`;
   carriedBar.style.width = `${(sim.player.carried / cap) * 100}%`;
 
   const litCount = sim.lanterns.filter((l) => l.lit).length;
   const total = sim.lanterns.length;
-  lanternsVal.textContent = `${litCount}/${total}`;
+  const req = Math.ceil((sim.tuning.win_ratio || 0.6) * total);
+  lanternsVal.textContent = `${litCount}/${total} (Cần: ${req})`;
   lanternsBar.style.width = `${(litCount / total) * 100}%`;
 
   scoreVal.textContent = sim.score;
@@ -978,7 +1124,8 @@ function animate(now) {
   const secs = Math.max(0, Math.ceil(sim.time_left_s));
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss = String(secs % 60).padStart(2, "0");
-  timerDisplay.textContent = `${mm}:${ss}`;
+  const warnPrefix = colorblindMode && secs <= 30 ? "⚠ " : "";
+  timerDisplay.textContent = `${warnPrefix}${mm}:${ss}`;
   timerDisplay.className = secs <= 30 ? "warning" : "";
 
   // Dash & Pulse cooldowns

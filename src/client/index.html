@@ -3,11 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng — Phase 2: Ba Hòn Đảo</title>
+  <title>Đảo Đèn Lồng — Phase 3: Đèn Cạn Dầu</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; background: #030610; font-family: 'Inter', system-ui, sans-serif; color: #e8ecf1; }
+    body.colorblind #timer-display.warning { color: #ffffff !important; }
+    body.colorblind #charm-banner { color: #ffffff !important; background: rgba(0, 179, 255, 0.25) !important; border-color: #00B3FF !important; }
+    body.colorblind #wind-banner { color: #ffffff !important; background: rgba(0, 179, 255, 0.25) !important; border-color: #00B3FF !important; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
 
     /* ── Top Bar: Night Selector ── */
@@ -235,6 +238,8 @@
     <div class="key-group"><span class="key">Q / F</span> Tỏa sáng</div>
     <div class="sep"></div>
     <div class="key-group"><span class="key">P</span> Tạm dừng</div>
+    <div class="sep"></div>
+    <div id="cb-toggle" class="key" style="cursor:pointer;" title="Chế độ Hỗ trợ Mù màu">👁 Mù màu: Tắt</div>
     <div class="sep"></div>
     <div id="sound-toggle" class="key" style="cursor:pointer;" title="Bật/Tắt âm thanh">🔊</div>
   </div>

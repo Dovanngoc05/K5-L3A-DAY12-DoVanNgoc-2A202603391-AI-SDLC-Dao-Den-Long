@@ -30,7 +30,7 @@ Yêu cầu dự án được phát hành tại **[Đảo Đèn Lồng Lab](https
 |---|---|---|
 | 1 | **PRD-0** (mô tả tổng quát) + Test Contract | tag `phase-1` |
 | 2 | **Ticket-02**, phát hành khi Phase 1 kết thúc | tag `phase-2` |
-| 3 | **Ticket-03**, phát hành khi Phase 2 kết thúc | tag `phase-3` |
+| 3 | **Ticket-03** ("Đèn cạn dầu") + Test Contract v1.2 | tag `phase-3` |
 | 4 | **Ticket-04**, phát hành khi Phase 3 kết thúc | tag `phase-4` + Release `v1.0.0` |
 
 Yêu cầu sẽ được bổ sung và có thể thay đổi giữa các phase, giống dự án thật.
@@ -96,27 +96,24 @@ Không commit API key, token hay `.env`. Gửi link repo theo hướng dẫn c�
 | Chất lượng sản phẩm (đúng yêu cầu, chơi được) | 10 |
 | Video demo | 5 |
 
-## Sáng tạo của tôi (Hạng mục F)
+## Sáng tạo của tôi & Cập nhật Phase 3 ("Đèn cạn dầu")
 
-Theo tinh thần tự do sáng tạo của PRD-0 và Ticket-02 (không làm thay đổi hay phá vỡ Test Contract headless):
-1. **Linh Hồn Đồng Hành — Bé Đom Đóm Hoàng Kim "Lạc" (*Spiritual Companion*):**
-   - Một bé đom đóm hoàng kim nhỏ phát sáng bay lượn nhịp nhàng theo sau nhân vật Mây.
-   - Khi Bóng Mực tiếp cận trong bán kính 8m, bé Lạc tự động đổi sang màu đỏ rực cảnh báo nguy hiểm cho người chơi.
-2. **Hệ Thống Âm Thanh Procedural Tự Sinh (*Web Audio API*):**
-   - Âm thanh môi trường và tương tác thời gian thực được tổng hợp hoàn toàn bằng mã lệnh Web Audio API (zero external asset, không cần tải file MP3/WAV, không lo lỗi mạng).
-   - Âm thanh nhảy (*Jump whoosh*), nhặt đom đóm (*crystal chime*), nạp đèn (*celestial chime*), lướt nhanh (*dash swoosh*), và sóng tỏa sáng (*energy pulse*). Có nút bật/tắt (mute/unmute) trên HUD.
-3. **Môi Trường Ba Hòn Đảo Mở Rộng & Sống Động:**
-   - **Đêm 1 (Đảo Bến):** Cầu cảng gỗ (*Wooden Pier*) vươn ra biển đêm, cổng đền Torii đỏ, lối mòn đá rải sỏi từ tâm đảo ra 5 ngọn đèn.
-   - **Đêm 2 (Đảo Cau):** Cặp đảo đôi đối xứng kết nối bởi cầu tre không lan can mộc mạc và 2 bục nhảy bắn người chơi qua không trung.
-   - **Đêm 3 (Đảo Chuông):** Kết cấu 3 tầng cao thấp, 2 dốc xoay bán kính, tháp chuông cổ kính cao 8m ở đỉnh và hiệu ứng gió giật ngẫu nhiên.
-   - **Không gian bao la & Hùng vĩ:** Mặt biển mây mở rộng tới 1600m x 1600m, 28 bãi đá ngầm/rạn san hô ngoài khơi bao quanh đảo, đèn trời bay lơ lửng ở chân trời xa, và tính năng **cuộn chuột (Mouse Wheel)** để phóng to/thu nhỏ góc nhìn toàn cảnh.
-4. **Vật Thể Đá, Cây & Thuật Toán Cản Va Chạm Thực Tế (Solid Collision):**
-   - Các tảng đá rêu cổ, cây tùng phong ba, cột trụ cầu tre và tháp chuông đều có hình khối và bán kính va chạm vật lý.
-   - **Tuyệt đối không đi xuyên qua:** Cả người chơi và Bóng Mực khi va chạm vào cây hoặc đá đều bị đẩy lùi theo pháp tuyến bề mặt (solid collision pushback), ngăn chặn hoàn toàn việc đi xuyên qua vật thể.
-5. **Bằng Chứng Không Phá Vỡ Test Contract (Headless Isolation):**
-   - Các thực thể và hiệu ứng sáng tạo trên chỉ được kích hoạt trong chế độ hiển thị 3D (`src/client/game.js`) hoặc tùy chọn `obstacles_enabled`.
-   - Khi chạy chế độ kiểm thử tự động headless (`node src/headless.js`), hệ thống chỉ chạy qua lõi mô phỏng thuần túy `src/core/simulation.js`.
-   - Kết quả: **19/19 Unit Tests PASS** (gồm kiểm tra va chạm vật lý), 2 lần chạy headless cùng seed ra kết quả JSONL khớp tuyệt đối từng byte (`0 differences`), benchmark 21.600 ticks hoàn thành trong ~1.14 giây (vượt xa yêu cầu $\le 30$s).
+### 1. Luật Chơi & Cơ Chế Cốt Lõi Phase 3 (Ticket-03 — Test Contract v1.2)
+- **Nhiên liệu Đèn Lồng (`fuel`):** Đèn có thanh dầu tối đa 100, hao hụt tự nhiên 1.0 đơn vị/giây (1/60 mỗi tick). Khi hết dầu (`fuel <= 0`), đèn tắt và phát sự kiện `lantern_out`.
+- **Thắp lại đèn (`ever_lit`):** Đèn từng thắp chỉ tốn **5 đom đóm** để thắp lại (thay vì 10) và được cộng +40 điểm.
+- **Châm dầu (`refuel`):** Đèn đang sáng chưa đầy dầu có thể châm thêm bằng phím `E` (`used = min(carried, ceil((100 - fuel)/10))`), nạp +10 fuel/đom đóm và thưởng +5 điểm/đom đóm.
+- **Bóng Mực hút dầu (`drain`):** Đèn có `fuel < 30` bị mất vùng an toàn. Bóng Mực ở trạng thái `wander` sẽ săn tìm đèn yếu và hút 5 fuel/giây. Tỏa Sáng trúng bóng đang hút dầu được thưởng lớn **+15 điểm**.
+- **Luật Thắng Mới (Dawn Survival):** Bãi bỏ cơ chế thắng sớm khi thắp hết đèn! Người chơi phải sống sót đến khi hết giờ (bình minh) và giữ số đèn đang sáng $\ge 60\%$ tổng đèn (`dawn_survived`).
+- **Sức chứa Đom đóm động:** Tăng thêm +2 sức chứa sau mỗi lần thắp thành công, nâng giới hạn từ 10 lên tối đa 20 đom đóm.
+- **Chế độ Hỗ trợ Mù màu (Colorblind Mode):** Tích hợp nút chuyển chế độ ngay trên thanh điều khiển. Mắt & aura Bóng Mực đổi sang màu xanh cyan `#00B3FF`, cảnh báo màu trắng `#FFFFFF` kèm icon `⚠`, đèn tắt dẹt 20% và hiển thị ký hiệu giọt nước.
+
+### 2. Các Yếu Tố Sáng Tạo (Hạng mục F)
+1. **Linh Hồn Đồng Hành — Bé Đom Đóm Hoàng Kim "Lạc" (*Spiritual Companion*):** Bay theo sau Mây, đổi đỏ cảnh báo khi Bóng Mực áp sát trong 8m.
+2. **Hệ Thống Âm Thanh Procedural Tự Sinh (*Web Audio API*):** Âm thanh nhảy, nhặt đom đóm, thắp/châm đèn, lướt và tỏa sáng không phụ thuộc asset ngoài.
+3. **Môi Trường Ba Hòn Đảo Mở Rộng & Sống Động:** Đảo Bến (Đêm 1), Đảo Cau (Đêm 2 - bục nhảy ballistic), Đảo Chuông (Đêm 3 - tháp chuông 8m & gió cuốn). Biển mây 1600m x 1600m, bãi đá san hô, đèn trời xa xăm và điều khiển zoom camera.
+4. **Vật Thể Đá, Cây & Cản Va Chạm Thực Tế:** Đẩy lùi va chạm bề mặt, tuyệt đối không cho phép đi xuyên qua vật thể.
+
+---
 
 ## Hướng dẫn cài đặt & Chạy game
 
@@ -125,23 +122,24 @@ Theo tinh thần tự do sáng tạo của PRD-0 và Ticket-02 (không làm thay
 npm start
 # Mở trình duyệt tại: http://localhost:3000
 ```
-* **W / A / S / D**: Di chuyển Mây (có mũi tên xanh neon chỉ hướng dưới chân).
+* **W / A / S / D**: Di chuyển Mây.
 * **Space**: Nhảy (Jump).
 * **Shift**: Lướt nhanh (Dash) 14 m/s.
-* **E**: Nạp đom đóm vào Đèn Lồng Lớn.
-* **Q** hoặc **F**: Tỏa sáng (Pulse) làm choáng & đẩy lùi Bóng Mực (tốn 3 đom đóm).
+* **E**: Thắp đèn / Châm dầu.
+* **Q** hoặc **F**: Tỏa sáng (Pulse).
 * **P** hoặc **Esc**: Tạm dừng (Pause / Resume).
-* **Con lăn chuột (Scroll Wheel)**: Phóng to / thu nhỏ camera để ngắm toàn cảnh đảo rộng lớn.
-* **Thanh chọn Đêm**: Nhấp chọn Đêm 1 / Đêm 2 / Đêm 3 trực tiếp trên màn hình.
+* **👁 Mù màu**: Nhấp để Bật/Tắt chế độ hỗ trợ mù màu.
+* **Con lăn chuột (Scroll Wheel)**: Phóng to / thu nhỏ camera.
+* **Thanh chọn Đêm**: Chuyển nhanh giữa Đêm 1, 2, 3.
 
-### 2. Chạy kiểm thử tự động (19 Test Scenarios)
+### 2. Chạy kiểm thử tự động (28 Test Scenarios)
 ```bash
 npm test
 ```
 
-### 3. Chạy chế độ Headless (Test Contract v1.1)
+### 3. Chạy chế độ Headless (Test Contract v1.2)
 ```bash
-node src/headless.js --seed 42 --night 1 --ticks 600 --out docs/proof/out.jsonl
-node src/headless.js --seed 42 --night 2 --ticks 600 --out docs/proof/out_night2.jsonl
-node src/headless.js --seed 42 --night 3 --ticks 600 --out docs/proof/out_night3.jsonl
+node src/headless.js --seed 42 --night 1 --ticks 600 --out docs/proof/out_night1_v1.2.jsonl
+node src/headless.js --seed 42 --night 2 --ticks 600 --out docs/proof/out_night2_v1.2.jsonl
+node src/headless.js --seed 42 --night 3 --ticks 600 --out docs/proof/out_night3_v1.2.jsonl
 ```

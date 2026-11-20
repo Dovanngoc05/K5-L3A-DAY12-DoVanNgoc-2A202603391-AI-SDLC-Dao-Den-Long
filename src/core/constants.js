@@ -2,7 +2,15 @@ export const DEFAULT_TUNING = {
   player_speed: 6.0,
   player_charm_speed: 7.2,
   carry_capacity: 10,
+  capacity_max: 20,
   lantern_cost: 10,
+  relight_cost: 5,
+  fuel_max: 100,
+  fuel_decay_per_s: 1.0,
+  fuel_per_mote: 10,
+  drain_per_s: 5,
+  low_fuel_threshold: 30,
+  win_ratio: 0.6,
   lantern_count_night1: 5,
   lantern_count_night2: 6,
   lantern_count_night3: 7,
@@ -16,9 +24,9 @@ export const DEFAULT_TUNING = {
   pulse_push_m: 4.0,
   pulse_cooldown_s: 3.0,
   pulse_cooldown_ticks: 180,
-  night1_duration_s: 300,
-  night2_duration_s: 330,
-  night3_duration_s: 360,
+  night1_duration_s: 240,
+  night2_duration_s: 270,
+  night3_duration_s: 300,
   flames: 3,
   invuln_s: 1.5,
   invuln_ticks: 90,
@@ -52,11 +60,13 @@ export const DEFAULT_TUNING = {
   drifter_steal_max: 3,
   drifter_flee_ticks: 240,
   score: {
-    per_mote: 10,
-    per_lantern: 100,
+    per_mote_deposit: 5,
+    first_light_bonus: 100,
+    relight_bonus: 40,
     per_stun: 5,
-    per_second_left: 2,
-    per_flame_left: 50
+    per_drain_stun: 15,
+    dawn_lantern_bonus: 50,
+    dawn_flame_bonus: 50
   }
 };
 
@@ -64,7 +74,7 @@ export const DEFAULT_TUNING = {
 export const MAP_CONFIGS = {
   1: {
     name: "Đảo Bến",
-    duration_s: 300,
+    duration_s: 240,
     island_radius: 40.0,
     start_pos: [0.0, 0.0, 0.0],
     lanterns: [
@@ -117,7 +127,7 @@ export const MAP_CONFIGS = {
   },
   2: {
     name: "Đảo Cau",
-    duration_s: 330,
+    duration_s: 270,
     island_radius: 28.0,
     start_pos: [0.0, 0.0, 0.0],
     lanterns: [
@@ -181,7 +191,7 @@ export const MAP_CONFIGS = {
   },
   3: {
     name: "Đảo Chuông",
-    duration_s: 360,
+    duration_s: 300,
     island_radius: 45.0,
     start_pos: [0.0, 0.0, 0.0],
     lanterns: [

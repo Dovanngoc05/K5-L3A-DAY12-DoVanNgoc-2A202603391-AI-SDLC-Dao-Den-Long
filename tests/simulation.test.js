@@ -6,7 +6,7 @@ import path from "node:path";
 import { Simulation } from "../src/core/simulation.js";
 
 // ─────────────────────────────────────────────────────────────
-// PHẦN 1: Regression Tests (Cập nhật chuẩn hóa Contract v1.1)
+// PHẦN 1: Regression Tests (Cập nhật chuẩn hóa Contract v1.2)
 // ─────────────────────────────────────────────────────────────
 
 test("Player collects mote and increases score upon lantern deposit", () => {
@@ -22,10 +22,11 @@ test("Player collects mote and increases score upon lantern deposit", () => {
   sim.step();
   assert.equal(sim.player.carried, 1);
   assert.equal(sim.motes.length, 0);
-  assert.equal(sim.score, 0); // Contract v1.1: score only on deposit (+10/mote)
+  assert.equal(sim.score, 0); // Contract v1.2: score only on deposit (+5/mote)
 });
 
 test("Player deposits motes into lantern and lights it", () => {
+  // [CẬP NHẬT TICKET-03]: Công thức điểm mới thay thế: +5 mỗi đom đóm nạp + 100 thắp lần đầu = 150 điểm (thay vì 200 của v1.1)
   const sim = new Simulation({
     scenario: {
       player: { pos: [0, 0, 5], carried: 10, flames: 3 },
@@ -42,11 +43,13 @@ test("Player deposits motes into lantern and lights it", () => {
   const l1 = sim.lanterns.find((l) => l.id === "L1");
   assert.equal(l1.deposited, 10);
   assert.equal(l1.lit, true);
+  assert.equal(l1.fuel, 100); // Nhiên liệu khởi tạo đầy 100
   assert.equal(sim.player.carried, 0);
-  assert.equal(sim.score, 200); // 10*10 + 100
+  assert.equal(sim.score, 150); // 10*5 + 100 = 150
 });
 
 test("Player partial deposit into lantern", () => {
+  // [CẬP NHẬT TICKET-03]: Điểm nạp đom đóm đổi thành +5/con (4 * 5 = 20 thay vì 40 của v1.1)
   const sim = new Simulation({
     scenario: {
       player: { pos: [0, 0, 5], carried: 4, flames: 3 },
@@ -64,7 +67,7 @@ test("Player partial deposit into lantern", () => {
   assert.equal(l1.deposited, 4);
   assert.equal(l1.lit, false);
   assert.equal(sim.player.carried, 0);
-  assert.equal(sim.score, 40); // 4 * 10
+  assert.equal(sim.score, 20); // 4 * 5 = 20
 });
 
 test("Pulse stuns and pushes shades", () => {
@@ -99,7 +102,7 @@ test("Shade damages player when colliding", () => {
       player: { pos: [0, 0, 0], carried: 4, flames: 3 },
       random_motes: false,
       random_shades: false,
-      shades: [{ id: "S1", pos: [0.5, 0, 0] }] // within hit radius 1.0m
+      shades: [{ id: "S1", pos: [0.5, 0, 0], state: "chase" }] // within hit radius 1.0m
     }
   });
 
@@ -115,8 +118,8 @@ test("Safe radius around lit lantern blocks shade", () => {
       player: { pos: [0, 0, 0], carried: 0, flames: 3 },
       random_motes: false,
       random_shades: false,
-      lanterns: [{ id: "L1", pos: [10, 0, 0], lit: true }],
-      shades: [{ id: "S1", pos: [18, 0, 0] }] // safe_radius is 6.0m around (10,0,0)
+      lanterns: [{ id: "L1", pos: [10, 0, 0], lit: true, fuel: 100 }],
+      shades: [{ id: "S1", pos: [18, 0, 0], state: "chase" }] // safe_radius is 6.0m around (10,0,0)
     }
   });
 
@@ -185,7 +188,6 @@ test("Island fall: player falls off when fall_enabled is true", () => {
   });
 
   // Step until player walks off edge and falls past Y < -10
-  // Speed 6m/s, dt=1/60 => walks off at tick 2. Under gravity g=-20m/s^2, falls past -10 in ~60 ticks
   for (let i = 0; i < 70; i++) {
     sim.step();
   }
@@ -287,10 +289,6 @@ test("Headless CLI contract execution and exit codes", () => {
   if (fs.existsSync(badInputsPath)) fs.unlinkSync(badInputsPath);
 });
 
-// ─────────────────────────────────────────────────────────────
-// PHẦN 2: Tính năng mới Phase 2 (TICKET-02: "Ba hòn đảo")
-// ─────────────────────────────────────────────────────────────
-
 test("Phase 2: Dash mechanic moves at 14m/s for 12 ticks with 90 ticks cooldown", () => {
   const sim = new Simulation({
     scenario: {
@@ -309,11 +307,9 @@ test("Phase 2: Dash mechanic moves at 14m/s for 12 ticks with 90 ticks cooldown"
   assert.equal(sim.player.dash_ticks_left, 11);
   assert.equal(sim.player.dash_cd_ticks, 90);
 
-  // Run through remainder of dash duration (11 ticks)
   for (let i = 0; i < 11; i++) {
     sim.step();
   }
-  // Total 12 ticks * (14 m/s * 1/60s) = 2.8m
   assert.equal(sim.player.dash_ticks_left, 0);
   assert.equal(Math.abs(sim.player.pos[0] - 2.8) < 0.05, true);
   assert.equal(sim.player.dash_cd_ticks > 0, true);
@@ -336,16 +332,14 @@ test("Phase 2: Charm gives 7.2 m/s speed and zero cooldown dash", () => {
     }
   });
 
-  // Step 0: player moves onto charm C1
   sim.step();
   assert.equal(sim.player.charm_ticks, 600);
   const charm = sim.charms.find((c) => c.id === "C1");
   assert.equal(charm.available, false);
   assert.equal(charm.respawn_ticks, 2700);
 
-  // Step 1: dash with charm active
   sim.step();
-  assert.equal(sim.player.dash_cd_ticks, 0); // Zero cooldown with charm!
+  assert.equal(sim.player.dash_cd_ticks, 0);
 });
 
 test("Phase 2: Night 2 Jump pad launches player with ballistic trajectory to opposite island", () => {
@@ -358,19 +352,16 @@ test("Phase 2: Night 2 Jump pad launches player with ballistic trajectory to opp
     }
   });
 
-  // Step 1: player on jump pad at (20, 0, 18)
   sim.step();
   assert.equal(sim.player.grounded, false);
-  assert.equal(sim.player.vel[1] > 10.0, true); // vy = 14 m/s
+  assert.equal(sim.player.vel[1] > 10.0, true);
   assert.equal(sim.player.jump_pad_vel !== null, true);
 
-  // Trajectory flight ~1.4s (84 ticks) to land on Island B
   for (let i = 0; i < 90; i++) {
     sim.step();
   }
   assert.equal(sim.player.grounded, true);
   assert.equal(sim.player.jump_pad_vel, null);
-  // Landed in Island B area (around X ~ 50 to 70)
   assert.equal(sim.player.pos[0] > 45.0, true);
 });
 
@@ -386,58 +377,52 @@ test("Phase 2: Drifter (Gió Lạc) steals motes and drops them when pulsed", ()
     inputs: {
       frames: [
         { tick: 0 },
-        { tick: 1, pulse: true } // pulse immediately after being stolen from
+        { tick: 1, pulse: true }
       ]
     }
   });
 
-  // Tick 0: Drifter steals up to 3 motes
   sim.step();
   const d1 = sim.drifters.find((d) => d.id === "D1");
   assert.equal(d1.stolen, 3);
   assert.equal(d1.state, "flee");
-  assert.equal(sim.player.carried, 5); // 8 - 3 = 5
+  assert.equal(sim.player.carried, 5);
 
-  // Tick 1: Player pulses (costs 3 motes), hits fleeing drifter
   sim.step();
-  assert.equal(sim.player.carried, 2); // 5 - 3 = 2
-  assert.equal(d1.stolen, 0); // Drifter dropped stolen motes!
-  assert.equal(sim.motes.length, 3); // 3 dropped motes spawned
+  assert.equal(sim.player.carried, 2);
+  assert.equal(d1.stolen, 0);
+  assert.equal(sim.motes.length, 3);
 });
 
 test("Phase 2: Pause and Resume freezes simulation clock and entity updates", () => {
   const sim = new Simulation({
     inputs: {
       frames: [
-        { tick: 2, pause: true },   // Press pause at tick 2
-        { tick: 3, pause: false },  // Release pause button at tick 3
-        { tick: 10, pause: true },  // Press pause again to resume at tick 10
+        { tick: 2, pause: true },
+        { tick: 3, pause: false },
+        { tick: 10, pause: true },
         { tick: 11, pause: false }
       ]
     }
   });
 
-  // Step 0 and 1: playing
   sim.step();
   sim.step();
   assert.equal(sim.is_paused, false);
   assert.equal(sim.sim_tick, 2);
 
-  // Step 2: pause input received
   sim.step();
   assert.equal(sim.is_paused, true);
   assert.equal(sim.state, "paused");
   const simTickPaused = sim.sim_tick;
   const timeLeftPaused = sim.time_left_s;
 
-  // Step 3 to 9: while paused, tick increases but sim_tick & timer stay constant
   for (let i = 3; i < 10; i++) {
     sim.step();
     assert.equal(sim.sim_tick, simTickPaused);
     assert.equal(sim.time_left_s, timeLeftPaused);
   }
 
-  // Step 10: resume input received
   sim.step();
   assert.equal(sim.is_paused, false);
   assert.equal(sim.state, "playing");
@@ -445,7 +430,281 @@ test("Phase 2: Pause and Resume freezes simulation clock and entity updates", ()
   assert.equal(sim.sim_tick > simTickPaused, true);
 });
 
-test("Phase 2 Performance Benchmark: 21,600 ticks completes in <= 30 seconds", () => {
+test("Phase 2: Solid obstacle collision blocks movement and prevents pass-through", () => {
+  const sim = new Simulation({
+    obstacles_enabled: true,
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [
+        { tick: 0, move: [1, 0] }
+      ]
+    }
+  });
+
+  sim.obstacles = [{ id: "test_rock", pos: [2.0, 0.0, 0.0], radius: 1.0, height: 2.0 }];
+
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+
+  assert.equal(sim.player.pos[0] <= 0.6, true);
+  assert.equal(sim.player.pos[0] >= 0.5, true);
+});
+
+// ─────────────────────────────────────────────────────────────
+// PHẦN 2: Tính năng mới Phase 3 (TICKET-03: Change Request "Đèn cạn dầu")
+// ─────────────────────────────────────────────────────────────
+
+test("Phase 3: Lantern fuel decays naturally at 1.0 unit/s and turns off at 0 with lantern_out", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      lanterns: [{ id: "L1", pos: [10, 0, 0], lit: true, fuel: 1.0 }] // 1.0 unit = 60 ticks
+    }
+  });
+
+  // Step 59 ticks: still lit, fuel > 0
+  for (let i = 0; i < 59; i++) {
+    sim.step();
+  }
+  const l1 = sim.lanterns.find((l) => l.id === "L1");
+  assert.equal(l1.lit, true);
+  assert.equal(l1.fuel > 0, true);
+
+  // Step 60th tick: runs out of fuel (<= 0), turns off, emits lantern_out
+  sim.step();
+  assert.equal(l1.lit, false);
+  assert.equal(l1.fuel, 0.0);
+  assert.equal(l1.ever_lit, true);
+
+  const events = sim.flushEvents();
+  const outEv = events.find((e) => e.name === "lantern_out");
+  assert.equal(outEv !== undefined, true);
+  assert.equal(outEv.data.lantern_id, "L1");
+});
+
+test("Phase 3: Relighting a previously lit lantern costs only 5 motes and awards +40 points", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [0, 0, 5], carried: 5, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      lanterns: [{ id: "L1", pos: [0, 0, 5], lit: false, ever_lit: true, deposited: 0 }]
+    },
+    inputs: {
+      frames: [{ tick: 0, interact: true }]
+    }
+  });
+
+  sim.step();
+  const l1 = sim.lanterns.find((l) => l.id === "L1");
+  assert.equal(l1.lit, true);
+  assert.equal(l1.fuel, 100);
+  assert.equal(l1.deposited, 5); // Chi phí thắp lại chỉ 5
+  assert.equal(l1.relit_count, 1);
+  assert.equal(sim.player.carried, 0);
+  // Điểm: 5 đom đóm * 5 + 40 điểm thắp lại = 65 điểm
+  assert.equal(sim.score, 65);
+
+  const events = sim.flushEvents();
+  const litEv = events.find((e) => e.name === "lantern_lit");
+  assert.equal(litEv !== undefined, true);
+  assert.equal(litEv.data.relight, true);
+});
+
+test("Phase 3: Refueling a lit lantern adds fuel and emits refuel event", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [0, 0, 5], carried: 2, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      lanterns: [{ id: "L1", pos: [0, 0, 5], lit: true, fuel: 80 }]
+    },
+    inputs: {
+      frames: [{ tick: 0, interact: true }]
+    }
+  });
+
+  sim.step();
+  const l1 = sim.lanterns.find((l) => l.id === "L1");
+  // 2 motes * 10 fuel = +20 fuel -> fuel reaches 100 (minus 1/60 tick decay)
+  assert.equal(l1.fuel >= 99.9, true);
+  assert.equal(sim.player.carried, 0);
+  assert.equal(sim.score, 10); // 2 * 5 = 10 điểm
+
+  const events = sim.flushEvents();
+  const refuelEv = events.find((e) => e.name === "refuel");
+  assert.equal(refuelEv !== undefined, true);
+  assert.equal(refuelEv.data.amount, 2);
+  assert.equal(refuelEv.data.fuel, 100);
+});
+
+test("Phase 3: Dynamic capacity increases by 2 per successful light up to max 20", () => {
+  const sim = new Simulation();
+  assert.equal(sim.capacity, 10);
+
+  sim.player.successful_lights = 1;
+  assert.equal(sim.capacity, 12);
+
+  sim.player.successful_lights = 4;
+  assert.equal(sim.capacity, 18);
+
+  sim.player.successful_lights = 7; // 10 + 14 = 24 -> capped at 20
+  assert.equal(sim.capacity, 20);
+});
+
+test("Phase 3: Shade in wander state targets weak lantern (fuel < 30) and drains 5 fuel/s", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [0, 0, -20], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      lanterns: [{ id: "L1", pos: [0, 0, 0], lit: true, fuel: 20 }], // weak lantern
+      shades: [{ id: "S1", pos: [0, 0, 1.0], state: "wander" }] // within 2m
+    }
+  });
+
+  // Step 1: shade S1 detects weak lantern within 2m, switches to "drain"
+  sim.step();
+  const s1 = sim.shades.find((s) => s.id === "S1");
+  assert.equal(s1.state, "drain");
+  assert.equal(s1.target_lantern_id, "L1");
+
+  // Step 60 ticks (1s) of draining:
+  // Fuel loses 1.0 (decay) + 5.0 (drain) = 6.0 units
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+  const l1 = sim.lanterns.find((l) => l.id === "L1");
+  assert.equal(Math.abs(l1.fuel - 14.0) < 0.2, true);
+
+  const events = sim.flushEvents();
+  const drainEv = events.find((e) => e.name === "fuel_drain");
+  assert.equal(drainEv !== undefined, true);
+  assert.equal(drainEv.data.lantern_id, "L1");
+});
+
+test("Phase 3: Pulse stuns draining shade and awards +15 points", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 3, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      lanterns: [{ id: "L1", pos: [0, 0, 1.0], lit: true, fuel: 25 }],
+      shades: [{ id: "S1", pos: [0, 0, 1.5], state: "drain", target_lantern_id: "L1" }]
+    },
+    inputs: {
+      frames: [{ tick: 0, pulse: true }]
+    }
+  });
+
+  sim.step();
+  const s1 = sim.shades.find((s) => s.id === "S1");
+  assert.equal(s1.state, "stunned");
+  assert.equal(s1.target_lantern_id, null);
+  // +15 điểm thưởng đặc biệt khi Tỏa Sáng trúng Bóng Mực đang hút dầu
+  assert.equal(sim.score, 15);
+});
+
+test("Phase 3: No early win when all lanterns are lit", () => {
+  const sim = new Simulation({
+    night: 1,
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      // Thắp sáng toàn bộ 5 đèn của Đêm 1
+      lanterns: [
+        { id: "L1", lit: true, fuel: 100 },
+        { id: "L2", lit: true, fuel: 100 },
+        { id: "L3", lit: true, fuel: 100 },
+        { id: "L4", lit: true, fuel: 100 },
+        { id: "L5", lit: true, fuel: 100 }
+      ]
+    }
+  });
+
+  sim.step();
+  // Không còn thắng sớm! Game vẫn tiếp tục "playing"
+  assert.equal(sim.state, "playing");
+});
+
+test("Phase 3: Winning by surviving to dawn with >= 60% lit lanterns (reason: dawn_survived)", () => {
+  const sim = new Simulation({
+    night: 1,
+    scenario: {
+      time_left_s: 0.02, // Hết giờ ở tick tiếp theo
+      player: { pos: [0, 0, 0], carried: 0, flames: 2 },
+      random_motes: false,
+      random_shades: false,
+      // 3/5 đèn đang sáng (đạt chuẩn >= 60%)
+      lanterns: [
+        { id: "L1", lit: true, fuel: 80 },
+        { id: "L2", lit: true, fuel: 90 },
+        { id: "L3", lit: true, fuel: 100 },
+        { id: "L4", lit: false, fuel: 0 },
+        { id: "L5", lit: false, fuel: 0 }
+      ]
+    }
+  });
+
+  // Step 2 ticks to dawn
+  sim.step();
+  sim.step();
+
+  assert.equal(sim.state, "won");
+  const events = sim.flushEvents();
+  const endEv = events.find((e) => e.name === "game_over");
+  assert.equal(endEv !== undefined, true);
+  assert.equal(endEv.data.result, "won");
+  assert.equal(endEv.data.reason, "dawn_survived");
+
+  // Điểm bình minh:
+  // L1: 50 + 79 = 129
+  // L2: 50 + 89 = 139
+  // L3: 50 + 99 = 149
+  // 2 Ngọn lửa: 2 * 50 = 100
+  // Tổng = 129 + 139 + 149 + 100 = 517
+  assert.equal(sim.score >= 510, true);
+});
+
+test("Phase 3: Losing at dawn if lit lanterns < 60% (reason: dawn)", () => {
+  const sim = new Simulation({
+    night: 1,
+    scenario: {
+      time_left_s: 0.02,
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      random_motes: false,
+      random_shades: false,
+      // Chỉ 2/5 đèn sáng (< 60%)
+      lanterns: [
+        { id: "L1", lit: true, fuel: 50 },
+        { id: "L2", lit: true, fuel: 50 },
+        { id: "L3", lit: false, fuel: 0 },
+        { id: "L4", lit: false, fuel: 0 },
+        { id: "L5", lit: false, fuel: 0 }
+      ]
+    }
+  });
+
+  sim.step();
+  sim.step();
+
+  assert.equal(sim.state, "lost");
+  const events = sim.flushEvents();
+  const endEv = events.find((e) => e.name === "game_over");
+  assert.equal(endEv !== undefined, true);
+  assert.equal(endEv.data.result, "lost");
+  assert.equal(endEv.data.reason, "dawn");
+});
+
+test("Phase 3 Performance Benchmark: 21,600 ticks completes in <= 30 seconds", () => {
   const sim = new Simulation({
     seed: 12345,
     night: 3
@@ -462,32 +721,4 @@ test("Phase 2 Performance Benchmark: 21,600 ticks completes in <= 30 seconds", (
   const durationMs = Date.now() - startTime;
   console.log(`      ⏱  21,600 ticks simulated in ${durationMs}ms (${(durationMs / 1000).toFixed(2)}s)`);
   assert.equal(durationMs <= 30000, true);
-});
-
-test("Phase 2: Solid obstacle collision blocks movement and prevents pass-through", () => {
-  const sim = new Simulation({
-    obstacles_enabled: true,
-    scenario: {
-      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
-      random_motes: false,
-      random_shades: false
-    },
-    inputs: {
-      frames: [
-        { tick: 0, move: [1, 0] } // moving +X directly into a rock
-      ]
-    }
-  });
-
-  // Solid rock at pos: [2.0, 0, 0] with radius 1.0m
-  sim.obstacles = [{ id: "test_rock", pos: [2.0, 0.0, 0.0], radius: 1.0, height: 2.0 }];
-
-  // Step 60 ticks (1s) at speed 6.0 m/s (would reach X = 6.0m if unobstructed)
-  for (let i = 0; i < 60; i++) {
-    sim.step();
-  }
-
-  // Player must be blocked at rock boundary (2.0 - 1.0 - 0.45 = 0.55m max)
-  assert.equal(sim.player.pos[0] <= 0.6, true);
-  assert.equal(sim.player.pos[0] >= 0.5, true);
 });
