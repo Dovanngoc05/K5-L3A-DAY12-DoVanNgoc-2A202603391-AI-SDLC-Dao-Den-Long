@@ -172,6 +172,24 @@ const pLight = new THREE.PointLight(0xffcc66, 2.5, 12);
 pLight.position.set(0.55, 1.0, 0.2);
 playerGroup.add(pLight);
 
+// Direction arrow at player's feet
+const arrowShape = new THREE.Shape();
+arrowShape.moveTo(0, 0.8);        // tip (forward)
+arrowShape.lineTo(-0.3, 0.2);     // left wing
+arrowShape.lineTo(-0.1, 0.2);
+arrowShape.lineTo(-0.1, -0.4);    // tail left
+arrowShape.lineTo(0.1, -0.4);     // tail right
+arrowShape.lineTo(0.1, 0.2);
+arrowShape.lineTo(0.3, 0.2);      // right wing
+arrowShape.closePath();
+
+const arrowGeo = new THREE.ShapeGeometry(arrowShape);
+const arrowMat = new THREE.MeshBasicMaterial({ color: 0x0be881, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+const dirArrow = new THREE.Mesh(arrowGeo, arrowMat);
+dirArrow.rotation.x = -Math.PI / 2; // lay flat on ground
+dirArrow.position.y = 0.05;         // just above ground
+playerGroup.add(dirArrow);
+
 scene.add(playerGroup);
 
 // ── Lanterns (5 large) ──
@@ -322,7 +340,8 @@ function updateFlamesUI() {
 updateFlamesUI();
 
 // ── Camera state ──
-let camAngle = Math.PI; // behind player (looking in -Z direction from +Z)
+// camAngle = 0 → camera BEHIND player at +Z, looking toward -Z
+let camAngle = 0;
 const CAM_DIST = 14;
 const CAM_HEIGHT = 9;
 
@@ -366,6 +385,14 @@ function animate(now) {
 
   // ── Player visual ──
   playerGroup.position.set(px, py, pz);
+
+  // Rotate player to face movement direction
+  const moveX = sim.currentInput.move[0];
+  const moveZ = sim.currentInput.move[1];
+  if (Math.abs(moveX) > 0.01 || Math.abs(moveZ) > 0.01) {
+    // move is [mx, mz] where mz=-1 is forward (-Z world), mx=+1 is right (+X world)
+    playerGroup.rotation.y = Math.atan2(-moveX, -moveZ);
+  }
 
   // Bobbing animation
   const bob = Math.sin(now * 0.006) * 0.04;
