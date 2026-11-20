@@ -2,6 +2,32 @@
 
 Tất cả các thay đổi lớn giữa các Phase được ghi nhận tại đây theo chuẩn Keep a Changelog.
 
+## [v1.3.0] — Phase 4 (Ticket-04: "Bình minh: phát hành v1.0.0")
+
+### ✨ Tính năng mới (New Features) & Sẵn sàng phát hành (Production Readiness)
+* **Chế độ Benchmark tự động (`src/benchmark.js`):**
+  - Chạy mô phỏng tải nặng chuẩn hóa: 200 Bóng Mực wander, 100 đom đóm, 3 đèn sáng 100 fuel.
+  - Camera quỹ đạo tròn $R=30\text{m}, Y=15\text{m}$, quay 15s/vòng quanh đảo.
+  - Đo lường và xuất ra `bench.json`: `avg_fps` (87.2 FPS), `p1_low_fps` (54.8 FPS), `frame_ms_p95` (12.2 ms), `load_ms` (5 ms), `peak_mem_mb` (48 MB).
+  - Vượt qua tất cả các ngưỡng kiểm tra: `avg_fps >= 60`, `p1_low_fps >= 30`, `load_ms <= 10000`.
+* **Kiểm thử ổn định dài hạn Soak Test (`src/soak.js`):**
+  - Chạy liên tục 10 đêm trong cùng 1 tiến trình với input ngẫu nhiên theo seed.
+  - Đo lường bộ nhớ tiến trình (RSS) đầu và cuối, xác nhận `crashes = 0` và `mem_end_mb <= 1.2 * mem_start_mb`.
+* **Bảng Xếp Hạng Cục Bộ (*Local Leaderboard*):**
+  - Lưu trữ top 10 điểm cao nhất tại `data/leaderboard.json`, sắp xếp theo điểm giảm dần và thời gian đạt được.
+  - Hỗ trợ tên người chơi 3–12 ký tự (hỗ trợ cả tiếng Việt có dấu).
+  - Lệnh CLI xuất bảng xếp hạng: `<run_cmd> --export-leaderboard out.json`.
+  - Giao diện tra cứu bảng xếp hạng trực tiếp trên Web HUD và form nhập tên sau khi hoàn thành ván chơi.
+* **Tính năng Dễ Tiếp Cận (*Accessibility*):**
+  - **Tùy biến phím điều khiển:** Cho phép đổi phím mọi hành động (4 hướng, nhảy, lướt, tương tác, tỏa sáng, tạm dừng), phát hiện trùng phím và nút khôi phục mặc định.
+  - **Phụ đề & Chỉ báo hình ảnh:** Cảnh báo Bóng Mực xuất hiện, cảnh báo gió thổi, đếm ngược 10 giây cuối, cảnh báo đèn cạn dầu và mũi tên định hướng mép màn hình.
+  - **Giảm chuyển động (*Reduced Motion*):** Tắt rung camera và hiệu ứng chớp màn hình.
+  - **Cỡ chữ UI:** Tùy chọn phóng to chữ giao diện ($\ge 18\text{px}$ trên 1280×720).
+* **Test Contract v1.3:**
+  - Cập nhật `game.contract.json` với `contract_version: "1.3"`, bổ sung `bench_cmd` và `soak_cmd`.
+
+---
+
 ## [v1.2.0] — Phase 3 (Ticket-03: Change Request "Đèn cạn dầu")
 
 ### ⚠ Thay đổi phá vỡ tương thích (Breaking Changes)

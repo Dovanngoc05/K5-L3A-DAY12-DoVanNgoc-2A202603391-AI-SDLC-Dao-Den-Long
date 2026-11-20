@@ -2,6 +2,20 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Simulation } from "./core/simulation.js";
+import { exportLeaderboard } from "./core/leaderboard.js";
+
+// Check --export-leaderboard
+const exportIdx = process.argv.indexOf("--export-leaderboard");
+if (exportIdx !== -1) {
+  const outPath = process.argv[exportIdx + 1];
+  if (!outPath) {
+    process.stderr.write("Error: Missing output file path for --export-leaderboard\n");
+    process.exit(2);
+  }
+  const fullOutPath = path.isAbsolute(outPath) ? outPath : path.resolve(process.cwd(), outPath);
+  exportLeaderboard(fullOutPath);
+  process.exit(0);
+}
 
 function parseArgs(args) {
   const options = {

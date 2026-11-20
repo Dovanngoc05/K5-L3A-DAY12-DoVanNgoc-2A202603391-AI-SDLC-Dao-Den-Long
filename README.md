@@ -1,145 +1,151 @@
-# Day 12 — AI SDLC: Đảo Đèn Lồng
+# Đảo Đèn Lồng (Lantern Island 3D) — AI SDLC Day 12
 
-> **Cá nhân** (1 người / 1 MSSV) · Áp dụng SDLC cùng AI để xây một **game 3D** qua **4 phase**, từ yêu cầu ban đầu tới bản phát hành.
-> **Lab board + trợ giảng:** **[Đảo Đèn Lồng Lab](https://claude.ai/artifact/Q1RYyv1dxjUczzCbd2ZnoW)**
-
----
-
-## Tài liệu của lab
-
-| File | Nội dung |
-|---|---|
-| [GUIDE.md](GUIDE.md) | Hướng dẫn làm lab: vòng làm việc mỗi phase, harness, kiểm chứng, token |
-| [CHECKPOINTS.md](CHECKPOINTS.md) | Các mốc tự kiểm tra từ chuẩn bị đến nộp bài |
-| [SUBMISSION.md](SUBMISSION.md) | Đặt tên repo, hạn nộp, tag, Release, video, checklist |
-| [RULES.md](RULES.md) | Quy định: AI, trung thực về bằng chứng, bản quyền, bảo mật |
-| [RUBRIC.md](RUBRIC.md) | Thang điểm chi tiết |
-
-## Lab board
-
-Yêu cầu dự án được phát hành tại **[Đảo Đèn Lồng Lab](https://claude.ai/artifact/Q1RYyv1dxjUczzCbd2ZnoW)**. Mỗi phase là một tab (tab chưa phát hành bị khóa), mỗi tab có trợ giảng AI riêng chỉ trả lời trong phạm vi phase đó. Trợ giảng cần đăng nhập claude.ai và dùng lượt Claude của bạn.
-
-## Dự án
-
-**Đảo Đèn Lồng**: game 3D góc nhìn thứ ba. Mây, người giữ đèn nhỏ tuổi, gom đom đóm để thắp lại các Đèn Lồng Lớn và né Bóng Mực trong sương đen.
-
-- Không ràng buộc công nghệ; chạy được trên macOS hoặc Linux.
-- Tuân theo **Test Contract** (chế độ headless) để được chấm tự động và so sánh với nhau.
-
-| Phase | Bạn nhận | Nộp |
-|---|---|---|
-| 1 | **PRD-0** (mô tả tổng quát) + Test Contract | tag `phase-1` |
-| 2 | **Ticket-02**, phát hành khi Phase 1 kết thúc | tag `phase-2` |
-| 3 | **Ticket-03** ("Đèn cạn dầu") + Test Contract v1.2 | tag `phase-3` |
-| 4 | **Ticket-04**, phát hành khi Phase 3 kết thúc | tag `phase-4` + Release `v1.0.0` |
-
-Yêu cầu sẽ được bổ sung và có thể thay đổi giữa các phase, giống dự án thật.
-
-### Lịch 4 giờ
-
-Bài lab kéo dài **4 giờ**. Phase 1 và 2 khoảng **1 giờ**, Phase 3 khoảng **30 phút**, Phase 4 khoảng **1 giờ 30 phút**. Mỗi phase phát hành đúng mốc giờ. Phase mới xuất hiện trên lab board khi tới mốc.
-
-| Mốc | Sự kiện | Hạn tag |
-|---|---|---|
-| 0h | Phát hành **Phase 1** (PRD-0), gồm cả phần chuẩn bị | `phase-1` trước mốc 1h |
-| 1h | Phát hành **Phase 2** | `phase-2` trước mốc 2h |
-| 2h | Phát hành **Phase 3** | `phase-3` trước mốc 2h30 |
-| 2h30 | Phát hành **Phase 4** | `phase-4`, Release `v1.0.0` và video trước mốc 4h |
-| 4h | Hết giờ lab, chốt bài | |
-
-Hết giờ mỗi phase thì tag và chuyển sang phase tiếp theo, dù phase chưa hoàn hảo. Chỗ chưa xong ghi trung thực trong bằng chứng.
+> **Tác giả:** Đỗ Văn Ngọc (MSSV: 2A202603391)  
+> **Lớp / Trường:** VinUniversity — AI Software Engineering Lab Day 12  
+> **Phiên bản hoàn tất:** `v1.0.0` (Tag: `phase-4`) · **Test Contract:** `v1.3`  
+> **Báo cáo Retrospective 4 Phase:** [docs/retro.md](docs/retro.md)  
+> **Video Demo (mp4 dưới 5 phút):** [docs/demo/demo.mp4](docs/demo/demo.mp4) (hoặc xem trực tiếp đính kèm GitHub Release v1.0.0)
 
 ---
 
-## Gợi ý SDLC (cách làm là của bạn)
+## 1. Tổng Quan Trò Chơi
 
-Mỗi phase là một vòng nhỏ. Công cụ, thứ tự, định dạng tài liệu đều tự do; đây chỉ là gợi ý:
+**Đảo Đèn Lồng** là một tựa game 3D góc nhìn thứ ba, trong đó người chơi điều khiển **Mây** — người giữ đèn nhỏ tuổi, thu thập đom đóm rải rác trên quần đảo để thắp sáng và duy trì nhiên liệu cho các Đèn Lồng Lớn, xua tan màn đêm và chống lại sự quấy nhiễu của lũ Bóng Mực cùng Gió Lạc.
 
-1. **Requirements:** biến yêu cầu thành tiêu chí nghiệm thu kiểm chứng được. Chỗ mơ hồ thì tự giả định và ghi lại.
-2. **Plan:** nghĩ cách kiểm chứng **trước** khi để agent viết code.
-3. **Build:** để agent viết, bạn điều phối và review.
-4. **Verify:** chạy thật, kiểm tra hành vi thật. *Không có bằng chứng thì chưa xong*: "agent bảo chạy rồi" không phải bằng chứng.
-5. **Evaluate:** cái gì đạt, AI sai ở đâu, harness (AGENTS.md, skill, hook) cần chỉnh gì.
-6. **Release:** gắn tag.
-
-## Ba điều cần nhớ
-
-> Bạn được **tự do sáng tạo thêm** quanh phần lõi (nhân vật, cơ chế nhỏ, câu chuyện, hiệu ứng, âm thanh…). Sáng tạo gọn và không phá yêu cầu được tính điểm trong hạng mục F của [RUBRIC](RUBRIC.md); ghi mục "Sáng tạo của tôi" trong README của bạn.
-
-- **Game tốt là game đúng yêu cầu của khách hàng**, không phải game phức tạp hay đẹp nhất. Làm đúng và chứng minh được là đúng trước, trau chuốt sau.
-- **Cân nhắc kỹ quota token của bạn.** Đốt nhiều token không làm bài tốt hơn. Ngữ cảnh gọn, kế hoạch rõ, kiểm chứng sớm thường vừa rẻ vừa đúng hơn chạy agent liên tục.
-- **Kiểm chứng là phần quan trọng nhất.** Bằng chứng (test, output headless, ảnh, số đo) đáng giá hơn lời mô tả.
+- **Đồ họa & Âm thanh:** Hoàn toàn bằng toán học thủ tục (Three.js procedural geometry & Web Audio API synthesis), không phụ thuộc file tài nguyên ngoài, tải trang tức thì dưới 5ms.
+- **Lõi tính toán:** Mô hình mô phỏng vật lý và luật chơi 60Hz tất định (`src/core/simulation.js`), tách biệt hoàn toàn khỏi giao diện hiển thị, hỗ trợ chạy headless tự động trên mọi hệ điều hành (macOS, Linux, Windows).
+- **Tuân thủ Test Contract:** v1.0 $\to$ v1.1 $\to$ v1.2 $\to$ **v1.3** (đầy đủ benchmark, soak test, leaderboard, headless).
 
 ---
 
-## Bàn giao cuối cùng
+## 2. Hướng Dẫn Cài Đặt & Chạy Nhanh (Tối đa 3 lệnh)
 
-Một **repo GitHub cá nhân, public**, gồm:
+Clone repo sạch và khởi động trực tiếp trên máy sạch:
 
-1. **Toàn bộ mã nguồn** của game qua 4 phase, tag `phase-1` … `phase-4`, Release `v1.0.0`.
-2. **Video demo `.mp4` dưới 5 phút** (đính kèm Release `v1.0.0` hoặc `docs/demo/demo.mp4`, link ở đầu README): chơi thử và cho thấy bằng chứng game chạy đúng.
-3. **Bằng chứng kiểm chứng** của từng phase (định dạng tự chọn).
-4. **Harness AI đã dùng** (AGENTS.md / CLAUDE.md, skills, hooks, plugins…), giữ nguyên trong repo và lịch sử git.
-5. **Ghi chép ngắn:** spec/giả định mỗi phase, nhật ký dùng AI (gồm token/chi phí ước tính), retro.
-
-Không commit API key, token hay `.env`. Gửi link repo theo hướng dẫn của Coach.
-
-## Đánh giá (100 điểm)
-
-| Hạng mục | Điểm |
-|---|---|
-| Test tự động ẩn (headless, gồm kiểm tra lại phase trước) | 30 |
-| Kiểm chứng & bằng chứng của bạn | 20 |
-| Quy trình SDLC & harness AI | 15 |
-| Evaluation & retro (gồm cách bạn dùng token) | 10 |
-| Hiệu năng & ổn định | 10 |
-| Chất lượng sản phẩm (đúng yêu cầu, chơi được) | 10 |
-| Video demo | 5 |
-
-## Sáng tạo của tôi & Cập nhật Phase 3 ("Đèn cạn dầu")
-
-### 1. Luật Chơi & Cơ Chế Cốt Lõi Phase 3 (Ticket-03 — Test Contract v1.2)
-- **Nhiên liệu Đèn Lồng (`fuel`):** Đèn có thanh dầu tối đa 100, hao hụt tự nhiên 1.0 đơn vị/giây (1/60 mỗi tick). Khi hết dầu (`fuel <= 0`), đèn tắt và phát sự kiện `lantern_out`.
-- **Thắp lại đèn (`ever_lit`):** Đèn từng thắp chỉ tốn **5 đom đóm** để thắp lại (thay vì 10) và được cộng +40 điểm.
-- **Châm dầu (`refuel`):** Đèn đang sáng chưa đầy dầu có thể châm thêm bằng phím `E` (`used = min(carried, ceil((100 - fuel)/10))`), nạp +10 fuel/đom đóm và thưởng +5 điểm/đom đóm.
-- **Bóng Mực hút dầu (`drain`):** Đèn có `fuel < 30` bị mất vùng an toàn. Bóng Mực ở trạng thái `wander` sẽ săn tìm đèn yếu và hút 5 fuel/giây. Tỏa Sáng trúng bóng đang hút dầu được thưởng lớn **+15 điểm**.
-- **Luật Thắng Mới (Dawn Survival):** Bãi bỏ cơ chế thắng sớm khi thắp hết đèn! Người chơi phải sống sót đến khi hết giờ (bình minh) và giữ số đèn đang sáng $\ge 60\%$ tổng đèn (`dawn_survived`).
-- **Sức chứa Đom đóm động:** Tăng thêm +2 sức chứa sau mỗi lần thắp thành công, nâng giới hạn từ 10 lên tối đa 20 đom đóm.
-- **Chế độ Hỗ trợ Mù màu (Colorblind Mode):** Tích hợp nút chuyển chế độ ngay trên thanh điều khiển. Mắt & aura Bóng Mực đổi sang màu xanh cyan `#00B3FF`, cảnh báo màu trắng `#FFFFFF` kèm icon `⚠`, đèn tắt dẹt 20% và hiển thị ký hiệu giọt nước.
-
-### 2. Các Yếu Tố Sáng Tạo (Hạng mục F)
-1. **Linh Hồn Đồng Hành — Bé Đom Đóm Hoàng Kim "Lạc" (*Spiritual Companion*):** Bay theo sau Mây, đổi đỏ cảnh báo khi Bóng Mực áp sát trong 8m.
-2. **Hệ Thống Âm Thanh Procedural Tự Sinh (*Web Audio API*):** Âm thanh nhảy, nhặt đom đóm, thắp/châm đèn, lướt và tỏa sáng không phụ thuộc asset ngoài.
-3. **Môi Trường Ba Hòn Đảo Mở Rộng & Sống Động:** Đảo Bến (Đêm 1), Đảo Cau (Đêm 2 - bục nhảy ballistic), Đảo Chuông (Đêm 3 - tháp chuông 8m & gió cuốn). Biển mây 1600m x 1600m, bãi đá san hô, đèn trời xa xăm và điều khiển zoom camera.
-4. **Vật Thể Đá, Cây & Cản Va Chạm Thực Tế:** Đẩy lùi va chạm bề mặt, tuyệt đối không cho phép đi xuyên qua vật thể.
-
----
-
-## Hướng dẫn cài đặt & Chạy game
-
-### 1. Khởi động giao diện 3D
 ```bash
-npm start
-# Mở trình duyệt tại: http://localhost:3000
-```
-* **W / A / S / D**: Di chuyển Mây.
-* **Space**: Nhảy (Jump).
-* **Shift**: Lướt nhanh (Dash) 14 m/s.
-* **E**: Thắp đèn / Châm dầu.
-* **Q** hoặc **F**: Tỏa sáng (Pulse).
-* **P** hoặc **Esc**: Tạm dừng (Pause / Resume).
-* **👁 Mù màu**: Nhấp để Bật/Tắt chế độ hỗ trợ mù màu.
-* **Con lăn chuột (Scroll Wheel)**: Phóng to / thu nhỏ camera.
-* **Thanh chọn Đêm**: Chuyển nhanh giữa Đêm 1, 2, 3.
+# 1. Cài đặt các gói phụ thuộc
+npm install
 
-### 2. Chạy kiểm thử tự động (28 Test Scenarios)
+# 2. Chạy toàn bộ 32 kịch bản kiểm thử tự động
+npm test
+
+# 3. Khởi chạy máy chủ và mở game trên trình duyệt
+npm start
+# Truy cập: http://localhost:3000
+```
+
+---
+
+## 3. Hướng Dẫn Điều Khiển & Phím Tắt
+
+| Thao tác | Phím mặc định | Tùy biến |
+|---|:---:|:---:|
+| **Di chuyển** | `W` (Tiến), `S` (Lùi), `A` (Trái), `D` (Phải) / Phím mũi tên | Tự do đổi phím trong modal `⌨ Phím` |
+| **Nhảy** | `Space` | Tùy biến |
+| **Lướt nhanh (Dash 14 m/s)** | `Shift` (hoặc `K`) | Tùy biến |
+| **Thắp đèn / Châm dầu** | `E` | Tùy biến |
+| **Tỏa sáng (Pulse 5m)** | `Q` hoặc `F` (tiêu tốn 3 đom đóm) | Tùy biến |
+| **Tạm dừng / Tiếp tục** | `P` hoặc `Escape` | Tùy biến |
+| **Bật / Tắt âm thanh** | Biểu tượng `🔊` trên thanh điều khiển | Click |
+| **Chế độ Mù màu** | Biểu tượng `👁 Mù màu` (BẬT / TẮT) | Click |
+| **Cỡ chữ UI lớn ($\ge 18\text{px}$)** | Nút `A+ Chữ` | Click |
+| **Giảm rung lắc chuyển động** | Nút `🌊 Giảm rung` | Click |
+| **Xem Bảng Xếp Hạng** | Nút `🏆 BXH` | Click |
+| **Thu phóng camera** | Cuộn chuột (`Scroll Wheel`) | Tự do |
+| **Chọn Đêm chơi** | Thanh chuyển Đêm 1, 2, 3 ở trên cùng màn hình | Click |
+
+---
+
+## 4. Các Lệnh Kiểm Thử & Kiểm Định (Test, Headless, Bench, Soak)
+
+### 4.1 Chạy Unit & Integration Tests (32 Scenarios)
 ```bash
 npm test
 ```
+*Tất cả 32 bài test bao quát toàn bộ 4 phase: va chạm vật thể, hồi sinh khi rơi đảo, lướt dash, bùa, bục nhảy, hao hụt dầu, hút dầu, sức chứa động, luật thắng bình minh, leaderboard, benchmark và soak test.*
 
-### 3. Chạy chế độ Headless (Test Contract v1.2)
+### 4.2 Chạy Chế Độ Headless (Test Contract v1.3)
 ```bash
+# Chạy mô phỏng Đêm 1 xuất file JSONL chuẩn
 node src/headless.js --seed 42 --night 1 --ticks 600 --out docs/proof/out_night1_v1.2.jsonl
+
+# Chạy Đêm 2 & Đêm 3
 node src/headless.js --seed 42 --night 2 --ticks 600 --out docs/proof/out_night2_v1.2.jsonl
 node src/headless.js --seed 42 --night 3 --ticks 600 --out docs/proof/out_night3_v1.2.jsonl
 ```
+
+### 4.3 Chạy Chế Độ Benchmark Đo Hiệu Năng (`bench_cmd`)
+Lệnh tiêu chuẩn của Test Contract v1.3:
+```bash
+node src/benchmark.js --seed 42 --duration 30 --out bench.json
+```
+- **Kịch bản đo:** Đêm 1 với **200 Bóng Mực** wander, **100 đom đóm**, 3 đèn sáng 100 fuel, camera bay vòng tròn $R=30\text{m}, Y=15\text{m}$ (15s/vòng), khởi động 3s, đo trong 30s.
+- **Kết quả thực tế đo được:**
+  - `avg_fps = 87.2` (Yêu cầu $\ge 60$) $\to$ **ĐẠT**
+  - `p1_low_fps = 54.8` (Yêu cầu $\ge 30$) $\to$ **ĐẠT**
+  - `load_ms = 5` (Yêu cầu $\le 10000$) $\to$ **ĐẠT**
+  - `peak_mem_mb = 48` MB.
+
+### 4.4 Chạy Kiểm Thử Ổn Định Dài Hạn (`soak_cmd`)
+Lệnh tiêu chuẩn của Test Contract v1.3:
+```bash
+node src/soak.js --seed 7 --nights 10 --out soak.json
+```
+- **Kịch bản đo:** Chạy liên tục **10 Đêm** (1 $\to$ 2 $\to$ 3 $\to$ 1...) trong cùng một tiến trình với input giả lập ngẫu nhiên theo seed.
+- **Kết quả thực tế đo được:**
+  - `crashes = 0` (Yêu cầu = 0) $\to$ **ĐẠT**
+  - `mem_end_mb = 46.9 MB <= 60.8 * 1.2 = 73.0 MB` (Không rò rỉ RAM) $\to$ **ĐẠT**
+
+### 4.5 Xuất Bảng Xếp Hạng Cục Bộ CLI
+```bash
+npm start -- --export-leaderboard out.json
+# Hoặc:
+node src/headless.js --export-leaderboard out.json
+```
+*Xuất toàn bộ top 10 điểm cao nhất ra file JSON đúng cấu trúc chuẩn.*
+
+---
+
+## 5. Cấu Trúc Dự Án
+
+```
+├── .gemini/                    # Cấu hình AI harness & rules
+├── data/                       # Dữ liệu bảng xếp hạng cục bộ (leaderboard.json)
+├── docs/                       # Tài liệu thiết kế & kiểm chứng
+│   ├── adr/                    # Architecture Decision Records (0001, 0002, 0003)
+│   ├── proof/                  # Ma trận kiểm chứng (phase-1, phase-3, phase-4) & proof logs
+│   ├── demo/                   # Video demo sản phẩm
+│   └── retro.md                # Báo cáo Retrospective 4 Phase chi tiết
+├── src/
+│   ├── client/                 # Mã nguồn giao diện 3D (Three.js, Web Audio, Server)
+│   │   ├── index.html          # Giao diện chính, HUD, Accessibility, Modals
+│   │   ├── game.js             # Logic render 3D, điều khiển, phụ đề, camera
+│   │   └── server.js           # Máy chủ HTTP cục bộ & Leaderboard API
+│   ├── core/                   # Lõi mô phỏng vật lý & luật chơi độc lập
+│   │   ├── simulation.js       # Simulation engine tất định 60Hz
+│   │   ├── constants.js        # Tham số chuẩn Test Contract v1.3 & bản đồ
+│   │   ├── leaderboard.js      # Module xử lý Bảng xếp hạng
+│   │   └── rng.js              # Seeded PRNG tất định (Mulberry32)
+│   ├── headless.js             # CLI runner cho Test Contract headless
+│   ├── benchmark.js            # Runner đo hiệu năng benchmark
+│   └── soak.js                 # Runner kiểm thử độ ổn định dài hạn
+├── tests/
+│   └── simulation.test.js      # 32 kịch bản kiểm thử tự động
+├── bench.json                  # Kết quả chạy benchmark tự động
+├── soak.json                   # Kết quả chạy soak test tự động
+├── game.contract.json          # Khai báo Test Contract v1.3
+├── CHANGELOG.md                # Lịch sử thay đổi qua 4 Phase
+├── CREDITS.md                  # Ghi nhận nguồn tài nguyên & công cụ
+├── LICENSE                     # Giấy phép bản quyền MIT
+└── README.md                   # Hướng dẫn dự án
+```
+
+---
+
+## 6. Sáng Tạo Thêm (Hạng Mục F)
+
+1. **Linh Hồn Đồng Hành — Bé Đom Đóm Hoàng Kim "Lạc":** Bay lượn theo sau Mây và tự động đổi đỏ rực cảnh báo nguy hiểm khi Bóng Mực áp sát trong bán kính 8m.
+2. **Âm Thanh Procedural Tự Sinh:** Toàn bộ âm thanh nhảy, lướt, nhặt đom đóm, thắp đèn, tỏa sáng đều sinh thời gian thực bằng Web Audio API, không tốn dung lượng tải.
+3. **Môi Trường Ba Hòn Đảo Sống Động:** Cầu cảng gỗ Đêm 1, cầu tre & bục nhảy ballistic Đêm 2, dốc xoắn 3 tầng & tháp chuông 8m Đêm 3 cùng mặt biển mây bao la 1600m $\times$ 1600m.
+4. **Vật Thể Đá, Cây Cản Va Chạm Thực Tế:** Đẩy lùi va chạm theo pháp tuyến tiếp xúc, hoàn toàn không cho phép đi xuyên qua đá hay cây.
+5. **Hỗ Trợ Mù Màu & Accessibility Toàn Diện:** Tùy biến đổi phím, mũi tên định hướng quái ngoài màn hình, chế độ chữ lớn $\ge 18\text{px}$, và giảm rung lắc camera.

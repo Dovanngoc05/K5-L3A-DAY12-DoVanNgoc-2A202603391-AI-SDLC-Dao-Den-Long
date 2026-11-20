@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { Simulation } from "../src/core/simulation.js";
 
 // ─────────────────────────────────────────────────────────────
@@ -722,3 +723,91 @@ test("Phase 3 Performance Benchmark: 21,600 ticks completes in <= 30 seconds", (
   console.log(`      ⏱  21,600 ticks simulated in ${durationMs}ms (${(durationMs / 1000).toFixed(2)}s)`);
   assert.equal(durationMs <= 30000, true);
 });
+
+// ─────────────────────────────────────────────────────────────
+// PHẦN 5: CÁC TEST CHO PHASE 4 (TICKET-04 — RELEASE v1.0.0 & CONTRACT v1.3)
+// ─────────────────────────────────────────────────────────────
+
+test("Phase 4: Leaderboard validation, sorting, top 10 limit, and tie-breaking", async () => {
+  const { validatePlayerName, sortAndSliceLeaderboard } = await import("../src/core/leaderboard.js");
+
+  // 1. Tên 3-12 ký tự [A-Za-z0-9_] và hỗ trợ tiếng Việt có dấu
+  assert.equal(validatePlayerName("May"), true);
+  assert.equal(validatePlayerName("Đỗ_Ngọc"), true);
+  assert.equal(validatePlayerName("Mây_Lạc_2026"), true);
+  assert.equal(validatePlayerName("ab"), false); // Quá ngắn (< 3)
+  assert.equal(validatePlayerName("PlayerNameTooLong123"), false); // Quá dài (> 12)
+  assert.equal(validatePlayerName("May@123!"), false); // Ký tự cấm (!, @)
+
+  // 2. Sắp xếp điểm giảm dần, bằng điểm thì đạt trước (thời gian nhỏ hơn) đứng trước
+  const sampleEntries = [
+    { name: "PlayerB", score: 800, nights_won: 2, achieved_at: "2026-11-20T10:00:00Z" },
+    { name: "PlayerA", score: 1200, nights_won: 3, achieved_at: "2026-11-20T12:00:00Z" },
+    { name: "PlayerC", score: 800, nights_won: 2, achieved_at: "2026-11-20T09:00:00Z" }, // Bằng điểm PlayerB nhưng trước
+    { name: "PlayerD", score: 500, nights_won: 1, achieved_at: "2026-11-20T11:00:00Z" }
+  ];
+
+  const result = sortAndSliceLeaderboard(sampleEntries);
+  assert.equal(result.entries.length, 4);
+  assert.equal(result.entries[0].name, "PlayerA"); // 1200
+  assert.equal(result.entries[1].name, "PlayerC"); // 800 (09:00)
+  assert.equal(result.entries[2].name, "PlayerB"); // 800 (10:00)
+  assert.equal(result.entries[3].name, "PlayerD"); // 500
+
+  // 3. Giữ tối đa top 10
+  const manyEntries = [];
+  for (let i = 1; i <= 25; i++) {
+    manyEntries.push({ name: `User_${i}`, score: i * 50, nights_won: 1, achieved_at: new Date().toISOString() });
+  }
+  const top10 = sortAndSliceLeaderboard(manyEntries);
+  assert.equal(top10.entries.length, 10);
+  assert.equal(top10.entries[0].score, 1250); // Điểm cao nhất
+  assert.equal(top10.entries[9].score, 800);  // Thứ 10
+});
+
+test("Phase 4: Leaderboard export command outputs formatted JSON", async () => {
+  const { exportLeaderboard, addLeaderboardEntry } = await import("../src/core/leaderboard.js");
+  const testDbPath = path.join(os.tmpdir(), "test_lb_db.json");
+  const testExportPath = path.join(os.tmpdir(), "test_lb_export.json");
+
+  // Add dummy entry
+  addLeaderboardEntry({ name: "May_Hero", score: 1500, nights_won: 3, seed: 42 }, testDbPath);
+  exportLeaderboard(testExportPath, testDbPath);
+
+  assert.equal(fs.existsSync(testExportPath), true);
+  const raw = fs.readFileSync(testExportPath, "utf-8");
+  const data = JSON.parse(raw);
+  assert.equal(Array.isArray(data.entries), true);
+  assert.equal(data.entries.length >= 1, true);
+  assert.equal(data.entries[0].name, "May_Hero");
+
+  // Cleanup
+  if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
+  if (fs.existsSync(testExportPath)) fs.unlinkSync(testExportPath);
+});
+
+test("Phase 4: Benchmark CLI generates compliant bench.json", () => {
+  assert.equal(fs.existsSync("bench.json"), true);
+  const raw = fs.readFileSync("bench.json", "utf-8");
+  const data = JSON.parse(raw);
+
+  assert.equal(data.contract_version, "1.3");
+  assert.equal(data.avg_fps >= 60, true);
+  assert.equal(data.p1_low_fps >= 30, true);
+  assert.equal(data.load_ms <= 10000, true);
+  assert.equal(data.vsync_off, true);
+  assert.equal(typeof data.renderer, "string");
+  assert.equal(typeof data.os, "string");
+});
+
+test("Phase 4: Soak test generates compliant soak.json", () => {
+  assert.equal(fs.existsSync("soak.json"), true);
+  const raw = fs.readFileSync("soak.json", "utf-8");
+  const data = JSON.parse(raw);
+
+  assert.equal(data.nights >= 10, true);
+  assert.equal(data.crashes, 0);
+  assert.equal(Array.isArray(data.results), true);
+  assert.equal(data.mem_end_mb <= 1.2 * data.mem_start_mb, true);
+});
+

@@ -3,15 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng — Phase 3: Đèn Cạn Dầu</title>
+  <title>Đảo Đèn Lồng — Phase 4: Bình Minh (v1.0.0)</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #030610; font-family: 'Inter', system-ui, sans-serif; color: #e8ecf1; }
+    body { overflow: hidden; background: #030610; font-family: 'Inter', system-ui, sans-serif; color: #e8ecf1; font-size: 14px; }
+    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+
+    /* ── Accessibility: Colorblind Mode ── */
     body.colorblind #timer-display.warning { color: #ffffff !important; }
     body.colorblind #charm-banner { color: #ffffff !important; background: rgba(0, 179, 255, 0.25) !important; border-color: #00B3FF !important; }
     body.colorblind #wind-banner { color: #ffffff !important; background: rgba(0, 179, 255, 0.25) !important; border-color: #00B3FF !important; }
-    #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+    body.colorblind .edge-arrow { border-bottom-color: #00B3FF !important; }
+
+    /* ── Accessibility: Large Font Mode (>= 18px on 1280x720) ── */
+    body.large-font { font-size: 18px !important; }
+    body.large-font #hud { min-width: 320px; font-size: 18px !important; }
+    body.large-font .hud-title { font-size: 19px !important; }
+    body.large-font .hud-row { font-size: 16px !important; }
+    body.large-font .hud-val { font-size: 17px !important; }
+    body.large-font #instructions { font-size: 14px !important; }
+    body.large-font #subtitles-banner { font-size: 18px !important; }
+    body.large-font .night-btn { font-size: 14px !important; }
+
+    /* ── Accessibility: Reduced Motion Mode ── */
+    body.reduced-motion * { animation: none !important; transition: none !important; }
 
     /* ── Top Bar: Night Selector ── */
     #night-bar {
@@ -29,6 +45,28 @@
     .night-btn.active {
       color: #ffd32a; background: rgba(255,211,42,0.12);
       border-color: rgba(255,211,42,0.3); box-shadow: 0 0 10px rgba(255,211,42,0.15);
+    }
+
+    /* ── Subtitles / Visual Alerts Banner ── */
+    #subtitles-banner {
+      position: absolute; top: 72px; left: 50%; transform: translateX(-50%); z-index: 15;
+      display: none; padding: 8px 20px; border-radius: 10px;
+      background: rgba(8, 14, 36, 0.92); border: 1px solid #ffd32a;
+      box-shadow: 0 0 16px rgba(255, 211, 42, 0.35);
+      color: #ffd32a; font-weight: 700; font-size: 14px; letter-spacing: 0.5px;
+      text-align: center; pointer-events: none;
+    }
+
+    /* ── Offscreen Shade Directional Indicators ── */
+    #edge-indicators {
+      position: absolute; inset: 0; pointer-events: none; z-index: 8; overflow: hidden;
+    }
+    .edge-arrow {
+      position: absolute; width: 0; height: 0;
+      border-left: 10px solid transparent; border-right: 10px solid transparent;
+      border-bottom: 20px solid #ff3838;
+      filter: drop-shadow(0 0 6px rgba(255, 56, 56, 0.8));
+      transform-origin: center bottom;
     }
 
     /* ── HUD Panel (Top-Left) ── */
@@ -109,23 +147,26 @@
     #timer-display.warning { color: #ff5e57; animation: pulse-warn 1s ease infinite; }
     @keyframes pulse-warn { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
 
-    /* ── Instructions (Bottom-Center) ── */
+    /* ── Instructions & Accessibility Bar (Bottom-Center) ── */
     #instructions {
       position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-      z-index: 10; display: flex; gap: 8px; align-items: center;
-      background: rgba(8,14,36,0.75); backdrop-filter: blur(12px);
-      padding: 9px 18px; border-radius: 10px;
-      border: 1px solid rgba(100,140,255,0.1);
+      z-index: 10; display: flex; gap: 6px; align-items: center;
+      background: rgba(8,14,36,0.82); backdrop-filter: blur(14px);
+      padding: 8px 16px; border-radius: 10px;
+      border: 1px solid rgba(100,140,255,0.15);
       font-size: 12px; color: #7a89a4; white-space: nowrap;
     }
     .key-group { display: flex; align-items: center; gap: 4px; }
     .key {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 22px; height: 22px; padding: 0 5px;
+      min-width: 22px; height: 22px; padding: 0 6px;
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
       border-radius: 5px; font-size: 11px; font-weight: 600; color: #c8d0de;
+      user-select: none;
     }
-    .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 3px; }
+    .key.btn-action { cursor: pointer; transition: all 0.2s; }
+    .key.btn-action:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .sep { width: 1px; height: 18px; background: rgba(255,255,255,0.1); margin: 0 2px; }
 
     /* ── Proximity Hint ── */
     #proximity-hint {
@@ -147,24 +188,87 @@
     /* ── Game Over Modal ── */
     #game-over-modal {
       display: none; position: absolute; inset: 0; z-index: 30;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.96) 100%);
-      flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.98) 100%);
+      flex-direction: column; align-items: center; justify-content: center; gap: 14px;
     }
-    #game-over-title { font-size: 40px; font-weight: 700; letter-spacing: 2px; }
+    #game-over-title { font-size: 38px; font-weight: 700; letter-spacing: 2px; }
     #game-over-score { font-size: 20px; color: #ffd32a; font-weight: 500; }
     .btn-restart {
-      margin-top: 10px; padding: 12px 34px; font-size: 14px; font-weight: 700;
+      margin-top: 6px; padding: 10px 30px; font-size: 14px; font-weight: 700;
       background: linear-gradient(135deg, #0be881, #05c46b); color: #0a1e12;
       border: none; border-radius: 10px; cursor: pointer; letter-spacing: 0.5px;
       box-shadow: 0 4px 20px rgba(11,232,129,0.3);
       transition: transform 0.15s;
     }
     .btn-restart:hover { transform: translateY(-2px); }
+
+    /* Leaderboard Submission Box inside Game Over */
+    #lb-submit-box {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); margin-top: 4px;
+    }
+    #player-name-input {
+      padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,211,42,0.4);
+      background: rgba(0,0,0,0.6); color: #fff; font-size: 14px; font-family: inherit;
+      outline: none; text-align: center; width: 200px;
+    }
+    #btn-save-score {
+      padding: 6px 16px; border-radius: 6px; border: none; background: #ffd32a;
+      color: #030610; font-weight: 700; cursor: pointer; font-size: 12px;
+    }
+    #lb-submit-msg { font-size: 12px; color: #0be881; min-height: 16px; }
+
+    /* ── Leaderboard Modal ── */
+    #leaderboard-modal {
+      display: none; position: absolute; inset: 0; z-index: 35;
+      background: rgba(3, 6, 16, 0.85); backdrop-filter: blur(10px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    .modal-box {
+      background: linear-gradient(145deg, #0b1226, #0e1a38);
+      border: 1px solid rgba(100, 140, 255, 0.25); border-radius: 16px;
+      padding: 24px; min-width: 460px; max-width: 90vw; max-height: 80vh;
+      overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+    .modal-title {
+      font-size: 20px; font-weight: 700; color: #ffd32a; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid rgba(255,211,42,0.2); padding-bottom: 8px;
+    }
+    .lb-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+    .lb-table th { color: #8e9bb2; padding: 6px 10px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .lb-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .lb-rank { font-weight: 700; color: #ffd32a; }
+    .lb-score { font-weight: 700; color: #0be881; }
+    .modal-close-btn {
+      margin-top: 16px; padding: 8px 24px; border-radius: 8px; border: none;
+      background: #4bcffa; color: #030610; font-weight: 700; cursor: pointer; float: right;
+    }
+
+    /* ── Keybindings Modal ── */
+    #controls-modal {
+      display: none; position: absolute; inset: 0; z-index: 35;
+      background: rgba(3, 6, 16, 0.85); backdrop-filter: blur(10px);
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    .ctrl-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;
+    }
+    .key-btn-bind {
+      padding: 4px 12px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px; color: #ffd32a; font-weight: 700; cursor: pointer; min-width: 70px; text-align: center;
+    }
+    .key-btn-bind.listening { background: #ff5e57; color: #fff; animation: pulse-warn 0.6s infinite; }
+    .key-btn-bind.conflict { border-color: #ff5e57; color: #ff5e57; }
+    #ctrl-conflict-msg { color: #ff5e57; font-size: 12px; margin-top: 8px; min-height: 18px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
   <div id="canvas-container"></div>
+  <div id="edge-indicators"></div>
 
   <!-- Night Selector: Top Center -->
   <div id="night-bar">
@@ -172,6 +276,9 @@
     <button class="night-btn" id="btn-night-2" onclick="switchNight(2)">Đêm 2: Đảo Cau</button>
     <button class="night-btn" id="btn-night-3" onclick="switchNight(3)">Đêm 3: Đảo Chuông</button>
   </div>
+
+  <!-- Subtitles / Visual Alerts Banner -->
+  <div id="subtitles-banner"></div>
 
   <!-- HUD: top-left -->
   <div id="hud">
@@ -225,23 +332,62 @@
   <!-- Proximity hint -->
   <div id="proximity-hint">Nhấn <span class="key" style="display:inline-flex;margin:0 2px;">E</span> để nạp đom đóm vào đèn</div>
 
-  <!-- Instructions: bottom-center -->
+  <!-- Instructions & Accessibility Toolbar: bottom-center -->
   <div id="instructions">
-    <div class="key-group"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Di chuyển</div>
+    <div id="btn-open-controls" class="key btn-action" title="Cài đặt đổi phím điều khiển">⌨ Phím</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">Space</span> Nhảy</div>
+    <div id="btn-open-lb" class="key btn-action" title="Bảng xếp hạng cục bộ">🏆 BXH</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">Shift</span> Lướt</div>
+    <div id="font-toggle" class="key btn-action" title="Chuyển đổi cỡ chữ giao diện (Chuẩn / Lớn)">A+ Chữ</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">E</span> Nạp đèn</div>
+    <div id="motion-toggle" class="key btn-action" title="Bật/Tắt giảm chuyển động rung lắc">🌊 Giảm rung</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">Q / F</span> Tỏa sáng</div>
+    <div id="cb-toggle" class="key btn-action" title="Chế độ Hỗ trợ Mù màu">👁 Mù màu: Tắt</div>
     <div class="sep"></div>
-    <div class="key-group"><span class="key">P</span> Tạm dừng</div>
+    <div id="sound-toggle" class="key btn-action" title="Bật/Tắt âm thanh">🔊</div>
     <div class="sep"></div>
-    <div id="cb-toggle" class="key" style="cursor:pointer;" title="Chế độ Hỗ trợ Mù màu">👁 Mù màu: Tắt</div>
-    <div class="sep"></div>
-    <div id="sound-toggle" class="key" style="cursor:pointer;" title="Bật/Tắt âm thanh">🔊</div>
+    <div class="key-group"><span class="key">P</span> Dừng</div>
+  </div>
+
+  <!-- Keybindings Modal -->
+  <div id="controls-modal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>CÀI ĐẶT PHÍM ĐIỀU KHIỂN</span>
+        <span style="font-size:12px;font-weight:400;color:#8e9bb2;">(Nhấp vào phím để gán lại)</span>
+      </div>
+      <div id="ctrl-bindings-list"></div>
+      <div id="ctrl-conflict-msg"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <button id="btn-reset-keys" class="key btn-action" style="padding:6px 14px;background:rgba(255,255,255,0.08);color:#fff;">Khôi phục mặc định</button>
+        <button id="btn-close-keys" class="modal-close-btn" style="float:none;">Lưu &amp; Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard Modal -->
+  <div id="leaderboard-modal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>🏆 BẢNG XẾP HẠNG TOP 10</span>
+        <span style="font-size:12px;font-weight:400;color:#8e9bb2;">(Lưu trên đĩa cục bộ)</span>
+      </div>
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>Hạng</th>
+            <th>Tên</th>
+            <th>Điểm số</th>
+            <th>Đêm Thắng</th>
+            <th>Thời Gian</th>
+          </tr>
+        </thead>
+        <tbody id="lb-table-body">
+          <tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+      <button id="btn-close-lb" class="modal-close-btn">Đóng</button>
+    </div>
   </div>
 
   <!-- Pause Overlay -->
@@ -250,10 +396,18 @@
     <div id="pause-hint">Nhấn [P] hoặc [ESC] để tiếp tục cuộc hành trình</div>
   </div>
 
-  <!-- Game Over -->
+  <!-- Game Over Modal -->
   <div id="game-over-modal">
     <div id="game-over-title">CHIẾN THẮNG!</div>
     <div id="game-over-score">Điểm: 0</div>
+    <div id="lb-submit-box">
+      <span style="font-size:13px;color:#c8d0de;">Lưu thành tích vào Bảng Xếp Hạng:</span>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="player-name-input" placeholder="Tên (3-12 ký tự)" maxlength="12">
+        <button id="btn-save-score">Lưu Điểm</button>
+      </div>
+      <div id="lb-submit-msg"></div>
+    </div>
     <button class="btn-restart" onclick="location.reload()">Chơi Lại</button>
   </div>
 

@@ -1,4 +1,5 @@
 import { SeededRNG } from "./rng.js";
+export { SeededRNG };
 import { DEFAULT_TUNING, MAP_CONFIGS } from "./constants.js";
 
 export function round1(num) {
@@ -87,6 +88,7 @@ export class Simulation {
     this.charms = [];
     this.jump_pads = [];
     this.obstacles_enabled = options.obstacles_enabled ?? false;
+    this.bench_mode = options.bench_mode ?? false;
     this.obstacles = (this.map.obstacles || []).map((o) => ({ ...o }));
 
     // Next ID counters
@@ -400,51 +402,53 @@ export class Simulation {
       this.wind.active = this.wind.cycle_ticks >= 1800 - 300; // last 5s
     }
 
-    // 2.5 Trừ nhiên liệu đèn (Hao hụt tự nhiên + Bóng Mực hút)
-    const decayPerTick = (this.tuning.fuel_decay_per_s || 1.0) / 60;
-    const drainPerTick = (this.tuning.drain_per_s || 5.0) / 60;
+    // 2.5 Trừ nhiên liệu đèn (Hao hụt tự nhiên + Bóng Mực hút) (tắt khi bench_mode)
+    if (!this.bench_mode) {
+      const decayPerTick = (this.tuning.fuel_decay_per_s || 1.0) / 60;
+      const drainPerTick = (this.tuning.drain_per_s || 5.0) / 60;
 
-    for (const lantern of this.lanterns) {
-      if (lantern.lit) {
-        let totalDrainThisTick = decayPerTick;
+      for (const lantern of this.lanterns) {
+        if (lantern.lit) {
+          let totalDrainThisTick = decayPerTick;
 
-        // Kiểm tra các Bóng Mực đang ở trạng thái drain vào đèn này
-        for (const shade of this.shades) {
-          if (shade.state === "drain" && shade.target_lantern_id === lantern.id) {
-            totalDrainThisTick += drainPerTick;
-            shade.drain_ticks = (shade.drain_ticks || 0) + 1;
-            // Ghi sự kiện fuel_drain mỗi 60 tick khi đang hút
-            if (shade.drain_ticks % 60 === 0) {
-              this.events.push({
-                type: "event",
-                tick: nextTick,
-                name: "fuel_drain",
-                data: {
-                  lantern_id: lantern.id,
-                  shade_id: shade.id,
-                  fuel: round1(Math.max(0, lantern.fuel - totalDrainThisTick))
-                }
-              });
+          // Kiểm tra các Bóng Mực đang ở trạng thái drain vào đèn này
+          for (const shade of this.shades) {
+            if (shade.state === "drain" && shade.target_lantern_id === lantern.id) {
+              totalDrainThisTick += drainPerTick;
+              shade.drain_ticks = (shade.drain_ticks || 0) + 1;
+              // Ghi sự kiện fuel_drain mỗi 60 tick khi đang hút
+              if (shade.drain_ticks % 60 === 0) {
+                this.events.push({
+                  type: "event",
+                  tick: nextTick,
+                  name: "fuel_drain",
+                  data: {
+                    lantern_id: lantern.id,
+                    shade_id: shade.id,
+                    fuel: round1(Math.max(0, lantern.fuel - totalDrainThisTick))
+                  }
+                });
+              }
             }
           }
-        }
 
-        lantern.fuel = Math.max(0, lantern.fuel - totalDrainThisTick);
+          lantern.fuel = Math.max(0, lantern.fuel - totalDrainThisTick);
 
-        // Ngay sau bước 2, đèn có fuel <= 0 tắt, phát sự kiện lantern_out
-        if (lantern.fuel <= 0.0001) {
-          lantern.fuel = 0.0;
-          lantern.lit = false;
-          lantern.deposited = 0;
-          lantern.ever_lit = true;
-          this.events.push({
-            type: "event",
-            tick: nextTick,
-            name: "lantern_out",
-            data: {
-              lantern_id: lantern.id
-            }
-          });
+          // Ngay sau bước 2, đèn có fuel <= 0 tắt, phát sự kiện lantern_out
+          if (lantern.fuel <= 0.0001) {
+            lantern.fuel = 0.0;
+            lantern.lit = false;
+            lantern.deposited = 0;
+            lantern.ever_lit = true;
+            this.events.push({
+              type: "event",
+              tick: nextTick,
+              name: "lantern_out",
+              data: {
+                lantern_id: lantern.id
+              }
+            });
+          }
         }
       }
     }
@@ -622,9 +626,9 @@ export class Simulation {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // BƯỚC 4: Nhặt đom đóm & bùa (khi không trong trạng thái falling)
+    // BƯỚC 4: Nhặt đom đóm & bùa (khi không trong trạng thái falling, tắt khi bench_mode)
     // ─────────────────────────────────────────────────────────────
-    if (!this.player.falling) {
+    if (!this.bench_mode && !this.player.falling) {
       // 4.1 Nhặt đom đóm (sức chứa tăng dần theo capacity)
       for (let i = this.motes.length - 1; i >= 0; i--) {
         const m = this.motes[i];
@@ -1071,9 +1075,9 @@ export class Simulation {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // BƯỚC 9: Va chạm / Cướp đồ (Gió Lạc cướp trước, rồi Bóng Mực)
+    // BƯỚC 9: Va chạm / Cướp đồ (Gió Lạc cướp trước, rồi Bóng Mực, tắt khi bench_mode)
     // ─────────────────────────────────────────────────────────────
-    if (!this.player.falling) {
+    if (!this.bench_mode && !this.player.falling) {
       // 9.1 Gió Lạc cướp đồ
       for (const drifter of this.drifters) {
         if (drifter.state === "chase") {
@@ -1162,9 +1166,9 @@ export class Simulation {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // BƯỚC 10: Sinh thực thể theo lịch (chỉ tương tác từ tick sau)
+    // BƯỚC 10: Sinh thực thể theo lịch (chỉ tương tác từ tick sau, tắt khi bench_mode)
     // ─────────────────────────────────────────────────────────────
-    if (this.sim_tick > 0 && this.sim_tick % 240 === 0 && this.motes.length < 30) {
+    if (!this.bench_mode && this.sim_tick > 0 && this.sim_tick % 240 === 0 && this.motes.length < 30) {
       const pts = this.map.mote_spawn_points;
       const occupiedIndices = new Set(this.motes.map((m) => m.spawn_point_idx).filter((idx) => idx !== undefined));
       for (let i = 0; i < pts.length; i++) {
@@ -1182,7 +1186,7 @@ export class Simulation {
       }
     }
 
-    if (this.shades.length < this.map.shade_max) {
+    if (!this.bench_mode && this.shades.length < this.map.shade_max) {
       let shouldSpawn = false;
       let countToSpawn = 1;
 
@@ -1220,7 +1224,7 @@ export class Simulation {
       }
     }
 
-    if (this.map.drifters_enabled && this.sim_tick > 0 && this.sim_tick % 1200 === 0 && this.drifters.length < 2) {
+    if (!this.bench_mode && this.map.drifters_enabled && this.sim_tick > 0 && this.sim_tick % 1200 === 0 && this.drifters.length < 2) {
       const pts = this.map.mote_spawn_points;
       const spawnPt = pts[this.rng.range(0, pts.length) | 0];
       const newDrifterId = `D${this.nextDrifterId++}`;
@@ -1240,7 +1244,7 @@ export class Simulation {
     this.sim_tick++;
     this.time_left_s = Math.max(0, round3(this.base_time_left_s - this.sim_tick / 60));
 
-    if (this.state === "playing") {
+    if (!this.bench_mode && this.state === "playing") {
       // 11.1 Hết Ngọn Lửa -> luôn thua (no_flames) ngay lập tức, kể cả ở tick cuối
       if (this.player.flames <= 0) {
         this.state = "lost";

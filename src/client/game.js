@@ -746,7 +746,248 @@ if (soundToggleBtn) {
   });
 }
 
-// ── Phase 3: Colorblind Mode & Drain Tethers ──
+// ── Phase 4: Configurable Keybindings with Conflict Detection ──
+const DEFAULT_KEYBINDINGS = {
+  forward: "KeyW",
+  backward: "KeyS",
+  left: "KeyA",
+  right: "KeyD",
+  jump: "Space",
+  dash: "ShiftLeft",
+  interact: "KeyE",
+  pulse: "KeyQ",
+  pause: "KeyP"
+};
+
+const ACTION_LABELS = {
+  forward: "Đi tới",
+  backward: "Đi lùi",
+  left: "Sang trái",
+  right: "Sang phải",
+  jump: "Nhảy",
+  dash: "Lướt",
+  interact: "Tương tác / Nạp đèn",
+  pulse: "Tỏa sáng",
+  pause: "Tạm dừng"
+};
+
+let userKeybindings = { ...DEFAULT_KEYBINDINGS };
+try {
+  const saved = localStorage.getItem("dao_den_long_keys");
+  if (saved) {
+    userKeybindings = { ...DEFAULT_KEYBINDINGS, ...JSON.parse(saved) };
+  }
+} catch (e) {}
+
+// Keybindings Modal elements
+const controlsModal = document.getElementById("controls-modal");
+const ctrlBindingsList = document.getElementById("ctrl-bindings-list");
+const ctrlConflictMsg = document.getElementById("ctrl-conflict-msg");
+const btnResetKeys = document.getElementById("btn-reset-keys");
+const btnCloseKeys = document.getElementById("btn-close-keys");
+const btnOpenControls = document.getElementById("btn-open-controls");
+
+let listeningAction = null;
+
+function renderKeybindingsList() {
+  if (!ctrlBindingsList) return;
+  ctrlBindingsList.innerHTML = "";
+
+  // Check conflicts
+  const counts = {};
+  for (const act of Object.keys(userKeybindings)) {
+    const code = userKeybindings[act];
+    counts[code] = (counts[code] || 0) + 1;
+  }
+  const hasConflict = Object.values(counts).some((c) => c > 1);
+  if (ctrlConflictMsg) {
+    ctrlConflictMsg.textContent = hasConflict ? "⚠ Phát hiện phím trùng! Vui lòng chọn phím khác để tránh xung đột." : "";
+  }
+
+  for (const [action, label] of Object.entries(ACTION_LABELS)) {
+    const row = document.createElement("div");
+    row.className = "ctrl-row";
+
+    const labelSpan = document.createElement("span");
+    labelSpan.textContent = label;
+    row.appendChild(labelSpan);
+
+    const keyBtn = document.createElement("button");
+    const code = userKeybindings[action];
+    keyBtn.className = `key-btn-bind${counts[code] > 1 ? " conflict" : ""}${listeningAction === action ? " listening" : ""}`;
+    keyBtn.textContent = listeningAction === action ? "Bấm phím..." : code.replace("Key", "");
+
+    keyBtn.addEventListener("click", () => {
+      listeningAction = action;
+      renderKeybindingsList();
+    });
+
+    row.appendChild(keyBtn);
+    ctrlBindingsList.appendChild(row);
+  }
+}
+
+if (btnOpenControls) {
+  btnOpenControls.addEventListener("click", () => {
+    controlsModal.style.display = "flex";
+    renderKeybindingsList();
+  });
+}
+if (btnCloseKeys) {
+  btnCloseKeys.addEventListener("click", () => {
+    controlsModal.style.display = "none";
+    listeningAction = null;
+    try {
+      localStorage.setItem("dao_den_long_keys", JSON.stringify(userKeybindings));
+    } catch (e) {}
+  });
+}
+if (btnResetKeys) {
+  btnResetKeys.addEventListener("click", () => {
+    userKeybindings = { ...DEFAULT_KEYBINDINGS };
+    listeningAction = null;
+    try {
+      localStorage.setItem("dao_den_long_keys", JSON.stringify(userKeybindings));
+    } catch (e) {}
+    renderKeybindingsList();
+  });
+}
+
+// ── Subtitles / Visual Alerts ──
+const subtitlesBanner = document.getElementById("subtitles-banner");
+let subtitleTimeout = null;
+function showSubtitle(text, durationMs = 3200) {
+  if (!subtitlesBanner) return;
+  subtitlesBanner.textContent = text;
+  subtitlesBanner.style.display = "block";
+  clearTimeout(subtitleTimeout);
+  subtitleTimeout = setTimeout(() => {
+    subtitlesBanner.style.display = "none";
+  }, durationMs);
+}
+
+// ── Accessibility: Font Scaling & Reduced Motion ──
+const fontToggleBtn = document.getElementById("font-toggle");
+let isLargeFont = localStorage.getItem("dao_den_long_large_font") === "true";
+if (isLargeFont) document.body.classList.add("large-font");
+if (fontToggleBtn) {
+  fontToggleBtn.textContent = isLargeFont ? "A- Chữ Chuẩn" : "A+ Chữ Lớn";
+  fontToggleBtn.addEventListener("click", () => {
+    isLargeFont = !isLargeFont;
+    document.body.classList.toggle("large-font", isLargeFont);
+    fontToggleBtn.textContent = isLargeFont ? "A- Chữ Chuẩn" : "A+ Chữ Lớn";
+    localStorage.setItem("dao_den_long_large_font", String(isLargeFont));
+  });
+}
+
+const motionToggleBtn = document.getElementById("motion-toggle");
+let isReducedMotion = localStorage.getItem("dao_den_long_reduced_motion") === "true";
+if (isReducedMotion) document.body.classList.add("reduced-motion");
+if (motionToggleBtn) {
+  motionToggleBtn.textContent = isReducedMotion ? "🌊 Giảm rung: BẬT" : "🌊 Giảm rung";
+  motionToggleBtn.style.color = isReducedMotion ? "#0be881" : "#c8d0de";
+  motionToggleBtn.addEventListener("click", () => {
+    isReducedMotion = !isReducedMotion;
+    document.body.classList.toggle("reduced-motion", isReducedMotion);
+    motionToggleBtn.textContent = isReducedMotion ? "🌊 Giảm rung: BẬT" : "🌊 Giảm rung";
+    motionToggleBtn.style.color = isReducedMotion ? "#0be881" : "#c8d0de";
+    localStorage.setItem("dao_den_long_reduced_motion", String(isReducedMotion));
+  });
+}
+
+// ── Leaderboard UI & API ──
+const lbModal = document.getElementById("leaderboard-modal");
+const btnOpenLb = document.getElementById("btn-open-lb");
+const btnCloseLb = document.getElementById("btn-close-lb");
+const lbTableBody = document.getElementById("lb-table-body");
+const playerNameInput = document.getElementById("player-name-input");
+const btnSaveScore = document.getElementById("btn-save-score");
+const lbSubmitMsg = document.getElementById("lb-submit-msg");
+
+async function fetchAndRenderLeaderboard() {
+  if (!lbTableBody) return;
+  lbTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Đang tải dữ liệu...</td></tr>';
+  try {
+    const res = await fetch("/api/leaderboard");
+    const data = await res.json();
+    if (!data.entries || data.entries.length === 0) {
+      lbTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7a94;padding:20px;">Chưa có dữ liệu bảng xếp hạng.</td></tr>';
+      return;
+    }
+    let html = "";
+    data.entries.forEach((e, idx) => {
+      const d = new Date(e.achieved_at);
+      const dateStr = `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+      html += `<tr>
+        <td class="lb-rank">#${idx + 1}</td>
+        <td><strong>${e.name}</strong></td>
+        <td class="lb-score">${e.score}</td>
+        <td>Đêm ${e.nights_won}</td>
+        <td style="color:#7a89a4;font-size:11px;">${dateStr}</td>
+      </tr>`;
+    });
+    lbTableBody.innerHTML = html;
+  } catch (err) {
+    lbTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ff5e57;padding:20px;">Không thể tải bảng xếp hạng từ máy chủ.</td></tr>';
+  }
+}
+
+if (btnOpenLb) {
+  btnOpenLb.addEventListener("click", () => {
+    lbModal.style.display = "flex";
+    fetchAndRenderLeaderboard();
+  });
+}
+if (btnCloseLb) {
+  btnCloseLb.addEventListener("click", () => {
+    lbModal.style.display = "none";
+  });
+}
+
+if (btnSaveScore && playerNameInput) {
+  btnSaveScore.addEventListener("click", async () => {
+    const name = playerNameInput.value.trim();
+    if (name.length < 3 || name.length > 12) {
+      if (lbSubmitMsg) {
+        lbSubmitMsg.style.color = "#ff5e57";
+        lbSubmitMsg.textContent = "⚠ Tên phải từ 3 đến 12 ký tự!";
+      }
+      return;
+    }
+    try {
+      const res = await fetch("/api/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          score: sim.score,
+          nights_won: sim.state === "won" ? currentNight : Math.max(0, currentNight - 1),
+          seed: sim.seed
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (lbSubmitMsg) {
+          lbSubmitMsg.style.color = "#0be881";
+          lbSubmitMsg.textContent = "✔ Đã lưu thành tích vào Bảng Xếp Hạng!";
+        }
+        btnSaveScore.disabled = true;
+      } else {
+        if (lbSubmitMsg) {
+          lbSubmitMsg.style.color = "#ff5e57";
+          lbSubmitMsg.textContent = `⚠ ${data.error || "Lỗi lưu bảng xếp hạng"}`;
+        }
+      }
+    } catch (err) {
+      if (lbSubmitMsg) {
+        lbSubmitMsg.style.color = "#ff5e57";
+        lbSubmitMsg.textContent = "⚠ Không thể kết nối tới máy chủ!";
+      }
+    }
+  });
+}
+
+// ── Colorblind Mode & Drain Tethers ──
 let colorblindMode = false;
 const cbToggleBtn = document.getElementById("cb-toggle");
 if (cbToggleBtn) {
@@ -759,18 +1000,28 @@ if (cbToggleBtn) {
 }
 
 const drainTethers = new Map();
+const edgeIndicatorsContainer = document.getElementById("edge-indicators");
 
-// ── Input Handling ──
+// ── Input Handling with Rebound Keys ──
 const keys = {};
 addEventListener("keydown", (e) => {
+  if (listeningAction) {
+    userKeybindings[listeningAction] = e.code;
+    listeningAction = null;
+    renderKeybindingsList();
+    e.preventDefault();
+    return;
+  }
+
   keys[e.code] = true;
-  if (e.code === "KeyP" || e.code === "Escape") {
+  if (e.code === userKeybindings.pause || e.code === "Escape") {
     sim.currentInput.pause = true;
   }
 });
+
 addEventListener("keyup", (e) => {
   keys[e.code] = false;
-  if (e.code === "KeyP" || e.code === "Escape") {
+  if (e.code === userKeybindings.pause || e.code === "Escape") {
     sim.currentInput.pause = false;
   }
 });
@@ -822,17 +1073,17 @@ function animate(now) {
   while (accumulator >= DT) {
     let mx = 0;
     let mz = 0;
-    if (keys["KeyW"] || keys["ArrowUp"]) mz -= 1;
-    if (keys["KeyS"] || keys["ArrowDown"]) mz += 1;
-    if (keys["KeyA"] || keys["ArrowLeft"]) mx -= 1;
-    if (keys["KeyD"] || keys["ArrowRight"]) mx += 1;
+    if (keys[userKeybindings.forward] || (userKeybindings.forward === "KeyW" && keys["ArrowUp"])) mz -= 1;
+    if (keys[userKeybindings.backward] || (userKeybindings.backward === "KeyS" && keys["ArrowDown"])) mz += 1;
+    if (keys[userKeybindings.left] || (userKeybindings.left === "KeyA" && keys["ArrowLeft"])) mx -= 1;
+    if (keys[userKeybindings.right] || (userKeybindings.right === "KeyD" && keys["ArrowRight"])) mx += 1;
 
     sim.currentInput.move = [mx, mz];
     sim.currentInput.cam_yaw_deg = 0;
-    sim.currentInput.jump = !!keys["Space"];
-    sim.currentInput.interact = !!keys["KeyE"];
-    sim.currentInput.pulse = !!(keys["KeyF"] || keys["KeyQ"]);
-    sim.currentInput.dash = !!(keys["ShiftLeft"] || keys["ShiftRight"] || keys["KeyK"]);
+    sim.currentInput.jump = !!keys[userKeybindings.jump];
+    sim.currentInput.interact = !!keys[userKeybindings.interact];
+    sim.currentInput.pulse = !!keys[userKeybindings.pulse];
+    sim.currentInput.dash = !!keys[userKeybindings.dash];
 
     const prevCarried = sim.player.carried;
     const prevPulseCD = sim.player.pulse_cd_ticks;
@@ -858,6 +1109,10 @@ function animate(now) {
     const events = sim.flushEvents();
     for (const ev of events) {
       if (ev.name === "deposit") sfx.playDeposit();
+      if (ev.name === "shade_spawn") showSubtitle("👻 Bóng Mực vừa xuất hiện ở góc đảo!");
+      if (ev.name === "lantern_out") showSubtitle(`⚠ Đèn ${ev.data.lantern_id} vừa cạn dầu và tắt!`);
+      if (ev.name === "refuel") showSubtitle(`✨ Đã châm thêm ${ev.data.amount} đom đóm vào đèn!`);
+      if (ev.name === "lantern_lit") showSubtitle(`🏮 Đèn ${ev.data.lantern_id} đã được thắp sáng rực rỡ!`);
     }
 
     if (sim.player.pulse_cd_ticks > 0 && prevPulseCD === 0) {
@@ -1169,6 +1424,34 @@ function animate(now) {
   // Wind Banner (Night 3)
   if (windBanner) {
     windBanner.style.display = sim.wind.active ? "block" : "none";
+  }
+
+  // 10s countdown alert
+  if (secs === 10 && !window._warned10s) {
+    window._warned10s = true;
+    showSubtitle("⏰ 10 GIÂY CUỐI CÙNG TỚI BÌNH MINH!");
+  } else if (secs !== 10) {
+    window._warned10s = false;
+  }
+
+  // Edge screen directional arrows for nearby threatening Shades
+  if (edgeIndicatorsContainer) {
+    let edgeHtml = "";
+    for (const s of sim.shades) {
+      const dPlayer = Math.hypot(px - s.pos[0], pz - s.pos[2]);
+      if (dPlayer < 24.0) {
+        const v = new THREE.Vector3(s.pos[0], s.pos[1] + 0.8, s.pos[2]);
+        v.project(camera);
+        if (Math.abs(v.x) > 0.82 || Math.abs(v.y) > 0.82 || v.z > 1.0) {
+          const angle = Math.atan2(v.y, v.x);
+          const screenX = Math.max(30, Math.min(innerWidth - 30, (v.x * 0.5 + 0.5) * innerWidth));
+          const screenY = Math.max(30, Math.min(innerHeight - 30, (-v.y * 0.5 + 0.5) * innerHeight));
+          const deg = (angle * 180 / Math.PI) - 90;
+          edgeHtml += `<div class="edge-arrow" style="left:${screenX}px;top:${screenY}px;transform:translate(-50%,-50%) rotate(${deg}deg);"></div>`;
+        }
+      }
+    }
+    edgeIndicatorsContainer.innerHTML = edgeHtml;
   }
 
   // Game Over Modal
