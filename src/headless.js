@@ -51,11 +51,17 @@ function main() {
     inputsData = loadJSONFile(options.inputs);
   }
 
-  const sim = new Simulation({
-    seed: options.seed,
-    scenario: scenarioData,
-    inputs: inputsData
-  });
+  let sim;
+  try {
+    sim = new Simulation({
+      seed: options.seed,
+      scenario: scenarioData,
+      inputs: inputsData
+    });
+  } catch (err) {
+    process.stderr.write(`Invalid scenario/inputs format: ${err.message}\n`);
+    process.exit(2);
+  }
 
   const lines = [];
 

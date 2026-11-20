@@ -155,8 +155,19 @@ export class Simulation {
   }
 
   loadInputs(inputsData) {
-    if (inputsData && Array.isArray(inputsData.frames)) {
-      this.inputFrames = [...inputsData.frames].sort((a, b) => a.tick - b.tick);
+    if (!inputsData) return;
+    if (inputsData.frames !== undefined) {
+      if (!Array.isArray(inputsData.frames)) {
+        throw new Error("Invalid inputs format: frames must be an array");
+      }
+      let prevTick = -1;
+      for (const frame of inputsData.frames) {
+        if (typeof frame.tick !== "number" || frame.tick <= prevTick) {
+          throw new Error(`Invalid inputs format: frame tick ${frame.tick} must be strictly increasing`);
+        }
+        prevTick = frame.tick;
+      }
+      this.inputFrames = [...inputsData.frames];
     }
   }
 
@@ -314,8 +325,25 @@ export class Simulation {
         let d = Math.hypot(dx, dz);
         if (d > 0.01) {
           const stepDist = this.tuning.shade_speed * this.dt;
-          shade.pos[0] = round3(shade.pos[0] + (dx / d) * stepDist);
-          shade.pos[2] = round3(shade.pos[2] + (dz / d) * stepDist);
+          const nextX = round3(shade.pos[0] + (dx / d) * stepDist);
+          const nextZ = round3(shade.pos[2] + (dz / d) * stepDist);
+
+          // Safe radius check: Shade cannot enter within safe_radius of any lit lantern
+          let blockedByLantern = false;
+          for (const lantern of this.lanterns) {
+            if (lantern.lit) {
+              const nextDist = distXZ([nextX, 0, nextZ], lantern.pos);
+              if (nextDist <= this.tuning.safe_radius) {
+                blockedByLantern = true;
+                break;
+              }
+            }
+          }
+
+          if (!blockedByLantern) {
+            shade.pos[0] = nextX;
+            shade.pos[2] = nextZ;
+          }
         }
 
         // Check collision with player
