@@ -15,6 +15,7 @@ export const DEFAULT_TUNING = {
   pulse_push_m: 3.0,
   pulse_cooldown_s: 3.0,
   safe_radius: 3.0,
+  island_radius: 30.0,
   shade_speed: 3.5,
   shade_hit_radius: 1.0,
   fall_enabled: false,

@@ -85,7 +85,7 @@ for (let i = 0; i < seaPosAttr.count; i++) {
 }
 
 // ── Island (Đảo Bến) ──
-const ISLAND_R = 32;
+const ISLAND_R = sim.tuning.island_radius || 30.0;
 
 // Main Island Cliff
 const landGeo = new THREE.CylinderGeometry(ISLAND_R, ISLAND_R + 6, 4.5, 64);

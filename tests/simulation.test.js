@@ -98,6 +98,50 @@ test("Safe radius around lit lantern blocks shade", () => {
   assert.equal(distToLantern >= 3.0, true);
 });
 
+test("Island boundary: clamps player when fall_enabled is false", () => {
+  const sim = new Simulation({
+    scenario: {
+      player: { pos: [29.5, 0, 0], carried: 2, flames: 3 },
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [{ tick: 0, move: [1, 0] }] // moving +X continuously
+    }
+  });
+
+  // Step 60 ticks (1 second) at speed 6m/s
+  for (let i = 0; i < 60; i++) {
+    sim.step();
+  }
+  const dist = Math.hypot(sim.player.pos[0], sim.player.pos[2]);
+  assert.equal(dist <= 30.001, true);
+  assert.equal(sim.player.flames, 3); // not damaged
+});
+
+test("Island fall: player falls off when fall_enabled is true", () => {
+  const sim = new Simulation({
+    tuning: { fall_enabled: true, hit_drop_ratio: 0.5 },
+    scenario: {
+      player: { pos: [29.8, 0, 0], carried: 4, flames: 3 },
+      random_motes: false,
+      random_shades: false
+    },
+    inputs: {
+      frames: [{ tick: 0, move: [1, 0] }]
+    }
+  });
+
+  // Step until player falls off
+  sim.step(); // pos.x = 29.9
+  sim.step(); // pos.x = 30.0
+  sim.step(); // pos.x = 30.1 -> falls, respawns at [0, 0, 0]
+  assert.equal(sim.player.flames, 2);
+  assert.equal(sim.player.carried, 2); // 4 * 0.5 = 2 dropped
+  assert.equal(sim.player.pos[0], 0);
+  assert.equal(sim.player.pos[2], 0); // respawned at center
+});
+
 test("Deterministic simulation with same seed and inputs", () => {
   const options = {
     seed: 999,

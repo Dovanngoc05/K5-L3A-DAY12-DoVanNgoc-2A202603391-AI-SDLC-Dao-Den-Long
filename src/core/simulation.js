@@ -225,6 +225,46 @@ export class Simulation {
 
     const nextTick = this.tick + 1;
 
+    // 3b. Island Boundary & Fall Check
+    const maxRadius = this.tuning.island_radius || 30.0;
+    const playerDist = Math.hypot(this.player.pos[0], this.player.pos[2]);
+
+    if (playerDist > maxRadius) {
+      if (this.tuning.fall_enabled) {
+        this.player.flames = Math.max(0, this.player.flames - 1);
+        const dropped = Math.floor(this.player.carried * this.tuning.hit_drop_ratio);
+        this.player.carried -= dropped;
+        this.player.pos[0] = 0.0;
+        this.player.pos[2] = 0.0;
+        this.player.invuln_timer = this.tuning.invuln_s;
+        this.events.push({
+          type: "event",
+          tick: nextTick,
+          name: "player_hit",
+          data: {
+            by: "fall",
+            flames: this.player.flames,
+            dropped
+          }
+        });
+
+        if (this.player.flames <= 0) {
+          this.state = "lost";
+          this.events.push({
+            type: "event",
+            tick: nextTick,
+            name: "game_over",
+            data: { result: "lost", reason: "no_flames" }
+          });
+        }
+      } else {
+        // Clamp player inside island boundary
+        const ratio = maxRadius / playerDist;
+        this.player.pos[0] = round3(this.player.pos[0] * ratio);
+        this.player.pos[2] = round3(this.player.pos[2] * ratio);
+      }
+    }
+
     // 4. Mote Pickups
     for (let i = this.motes.length - 1; i >= 0; i--) {
       const mote = this.motes[i];
