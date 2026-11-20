@@ -41,18 +41,42 @@ sea.rotation.x = -Math.PI / 2;
 sea.position.y = -2.8;
 scene.add(sea);
 
-// Player Mesh (Mây)
+// Player Mesh (Mây - Người giữ đèn)
 const playerGroup = new THREE.Group();
-const bodyGeo = new THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(0.5, 0.8, 8, 16) : new THREE.CylinderGeometry(0.5, 0.5, 1.4, 16);
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x4bcffa, emissiveIntensity: 0.3 });
-const playerMesh = new THREE.Mesh(bodyGeo, bodyMat);
-playerMesh.position.y = 0.9;
-playerMesh.castShadow = true;
-playerGroup.add(playerMesh);
+
+// Body
+const bodyGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.0, 16);
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3dc1d3, roughness: 0.5 });
+const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+bodyMesh.position.y = 0.5;
+bodyMesh.castShadow = true;
+playerGroup.add(bodyMesh);
+
+// Head
+const headGeo = new THREE.SphereGeometry(0.32, 16, 16);
+const headMat = new THREE.MeshStandardMaterial({ color: 0xffd8d6, roughness: 0.4 });
+const headMesh = new THREE.Mesh(headGeo, headMat);
+headMesh.position.y = 1.25;
+headMesh.castShadow = true;
+playerGroup.add(headMesh);
+
+// Lantern Hat
+const hatGeo = new THREE.ConeGeometry(0.48, 0.35, 16);
+const hatMat = new THREE.MeshStandardMaterial({ color: 0xf6b93b, roughness: 0.3 });
+const hatMesh = new THREE.Mesh(hatGeo, hatMat);
+hatMesh.position.y = 1.55;
+playerGroup.add(hatMesh);
+
+// Small Handheld Lantern
+const miniLanternGeo = new THREE.OctahedronGeometry(0.2, 0);
+const miniLanternMat = new THREE.MeshStandardMaterial({ color: 0xfffa65, emissive: 0xfffa65, emissiveIntensity: 0.8 });
+const miniLantern = new THREE.Mesh(miniLanternGeo, miniLanternMat);
+miniLantern.position.set(0.5, 0.6, 0.3);
+playerGroup.add(miniLantern);
 
 // Player Light (Aura)
-const playerLight = new THREE.PointLight(0x4bcffa, 1.5, 8);
-playerLight.position.y = 1.2;
+const playerLight = new THREE.PointLight(0x4bcffa, 2.0, 10);
+playerLight.position.set(0.5, 0.7, 0.3);
 playerGroup.add(playerLight);
 scene.add(playerGroup);
 
@@ -193,7 +217,7 @@ function animate(now) {
     if (visual) {
       if (l.lit) {
         visual.headMat.color.setHex(0xffd32a);
-        visual.headMat.emissive = new THREE.Color(0xffd32a);
+        visual.headMat.emissive.setHex(0xffd32a);
         visual.headMat.emissiveIntensity = 1.0;
         visual.lLight.intensity = 2.5;
       }
