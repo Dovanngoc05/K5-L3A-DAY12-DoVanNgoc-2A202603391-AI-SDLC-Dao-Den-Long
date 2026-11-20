@@ -3,66 +3,163 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng — 3D Game</title>
+  <title>Dao Den Long — Lantern Island</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { overflow: hidden; background: #070b19; font-family: system-ui, -apple-system, sans-serif; color: #fff; }
+    body { overflow: hidden; background: #030610; font-family: 'Inter', system-ui, sans-serif; color: #e8ecf1; }
     #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+
+    /* ── HUD Panel ── */
     #hud {
-      position: absolute; top: 16px; left: 16px; z-index: 10;
-      background: rgba(10, 15, 30, 0.75); backdrop-filter: blur(8px);
-      padding: 16px 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.15);
-      display: flex; flex-direction: column; gap: 8px; font-size: 14px;
+      position: absolute; top: 20px; left: 20px; z-index: 10;
+      background: linear-gradient(145deg, rgba(8,14,36,0.88), rgba(14,22,52,0.82));
+      backdrop-filter: blur(16px) saturate(1.4);
+      padding: 18px 22px 14px; border-radius: 16px; min-width: 260px;
+      border: 1px solid rgba(100,140,255,0.12);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    .hud-title { font-weight: bold; font-size: 16px; color: #ffdd59; margin-bottom: 4px; }
-    .hud-row { display: flex; justify-content: space-between; gap: 20px; }
-    .hud-val { font-weight: bold; }
-    .flames { color: #ff5e57; font-size: 16px; letter-spacing: 2px; }
-    .motes { color: #4bcffa; }
-    .lanterns { color: #ffd32a; }
+    .hud-title {
+      font-size: 15px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      background: linear-gradient(90deg, #ffd32a, #ff9f43);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 12px; padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255,211,42,0.15);
+    }
+    .hud-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 5px 0; font-size: 13px; color: #9ba7bf;
+    }
+    .hud-row .label { font-weight: 500; }
+    .hud-val { font-weight: 700; font-size: 14px; }
+    .flames-bar { display: flex; gap: 3px; }
+    .flame-icon { width: 18px; height: 18px; filter: drop-shadow(0 0 4px #ff5e57); transition: opacity 0.3s; }
+    .flame-icon.lost { opacity: 0.15; filter: none; }
+    .val-cyan { color: #4bcffa; }
+    .val-gold { color: #ffd32a; }
+    .val-white { color: #fff; }
+    .val-score { color: #0be881; font-size: 16px; }
+
+    /* ── Progress Bars ── */
+    .bar-track { width: 80px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; transition: width 0.25s ease; }
+    .bar-cyan .bar-fill { background: linear-gradient(90deg, #0abde3, #4bcffa); }
+    .bar-gold .bar-fill { background: linear-gradient(90deg, #f6b93b, #ffd32a); }
+
+    /* ── Score panel (top-right) ── */
+    #score-panel {
+      position: absolute; top: 20px; right: 20px; z-index: 10; text-align: right;
+      background: linear-gradient(145deg, rgba(8,14,36,0.85), rgba(14,22,52,0.78));
+      backdrop-filter: blur(16px); padding: 14px 20px; border-radius: 14px;
+      border: 1px solid rgba(100,140,255,0.12);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    #score-panel .score-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; color: #6b7a94; text-transform: uppercase; }
+    #score-panel .score-num { font-size: 28px; font-weight: 700; color: #0be881; text-shadow: 0 0 20px rgba(11,232,129,0.3); }
+    #timer-display {
+      margin-top: 8px; font-size: 20px; font-weight: 600; color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+    #timer-display.warning { color: #ff5e57; animation: pulse-warn 1s ease infinite; }
+    @keyframes pulse-warn { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+
+    /* ── Instructions (bottom-center) ── */
     #instructions {
-      position: absolute; bottom: 16px; left: 16px; z-index: 10;
-      background: rgba(10, 15, 30, 0.65); padding: 10px 14px; border-radius: 8px;
-      font-size: 12px; line-height: 1.5; color: #d2dae2;
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 10; display: flex; gap: 10px; align-items: center;
+      background: rgba(8,14,36,0.7); backdrop-filter: blur(12px);
+      padding: 10px 20px; border-radius: 10px;
+      border: 1px solid rgba(100,140,255,0.08);
+      font-size: 12px; color: #7a89a4; white-space: nowrap;
     }
+    .key-group { display: flex; align-items: center; gap: 4px; }
+    .key {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 24px; height: 24px; padding: 0 6px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 5px; font-size: 11px; font-weight: 600; color: #c8d0de;
+    }
+    .sep { width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+
+    /* ── Proximity Hint ── */
+    #proximity-hint {
+      position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+      z-index: 10; display: none; padding: 8px 18px; border-radius: 8px;
+      background: rgba(255,211,42,0.15); border: 1px solid rgba(255,211,42,0.3);
+      color: #ffd32a; font-size: 13px; font-weight: 600;
+      animation: float-hint 2s ease-in-out infinite;
+    }
+    @keyframes float-hint { 0%,100%{ transform: translateX(-50%) translateY(0); } 50%{ transform: translateX(-50%) translateY(-4px); } }
+
+    /* ── Game Over ── */
     #game-over-modal {
-      display: none; position: absolute; inset: 0; z-index: 20;
-      background: rgba(0, 0, 0, 0.85); flex-direction: column;
-      align-items: center; justify-content: center; gap: 16px;
+      display: none; position: absolute; inset: 0; z-index: 30;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.95) 100%);
+      flex-direction: column; align-items: center; justify-content: center; gap: 12px;
     }
-    #game-over-title { font-size: 36px; font-weight: bold; }
-    #game-over-score { font-size: 20px; color: #ffd32a; }
+    #game-over-title { font-size: 42px; font-weight: 700; letter-spacing: 2px; }
+    #game-over-score { font-size: 22px; color: #ffd32a; font-weight: 500; }
     .btn-restart {
-      padding: 10px 24px; font-size: 16px; font-weight: bold; background: #0be881;
-      border: none; border-radius: 8px; cursor: pointer; color: #1e272e;
+      margin-top: 10px; padding: 12px 36px; font-size: 15px; font-weight: 700;
+      background: linear-gradient(135deg, #0be881, #05c46b); color: #0a1e12;
+      border: none; border-radius: 10px; cursor: pointer; letter-spacing: 0.5px;
+      box-shadow: 0 4px 20px rgba(11,232,129,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
-    .btn-restart:hover { background: #05c46b; }
+    .btn-restart:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(11,232,129,0.45); }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
   <div id="canvas-container"></div>
 
+  <!-- HUD: top-left -->
   <div id="hud">
-    <div class="hud-title">🏮 Đảo Đèn Lồng (Phase 1)</div>
-    <div class="hud-row"><span>Sinh lực (Flames):</span><span id="flames-val" class="flames">🔥🔥🔥</span></div>
-    <div class="hud-row"><span>Đom đóm mang theo:</span><span id="carried-val" class="motes">0 / 5</span></div>
-    <div class="hud-row"><span>Đèn đã thắp:</span><span id="lanterns-val" class="lanterns">0 / 5</span></div>
-    <div class="hud-row"><span>Thời gian còn lại:</span><span id="time-val" class="hud-val">300s</span></div>
-    <div class="hud-row"><span>Điểm số:</span><span id="score-val" class="hud-val">0</span></div>
+    <div class="hud-title">Dao Den Long</div>
+    <div class="hud-row">
+      <span class="label">Sinh luc</span>
+      <div id="flames-bar" class="flames-bar"></div>
+    </div>
+    <div class="hud-row">
+      <span class="label">Dom dom</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="carried-val" class="hud-val val-cyan">0/5</span>
+        <div class="bar-track bar-cyan"><div id="carried-bar" class="bar-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="hud-row">
+      <span class="label">Den long</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="lanterns-val" class="hud-val val-gold">0/5</span>
+        <div class="bar-track bar-gold"><div id="lanterns-bar" class="bar-fill" style="width:0%"></div></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Score & Timer: top-right -->
+  <div id="score-panel">
+    <div class="score-label">Diem so</div>
+    <div id="score-val" class="score-num">0</div>
+    <div id="timer-display">05:00</div>
+  </div>
+
+  <!-- Proximity hint -->
+  <div id="proximity-hint">Nhan <span class="key" style="display:inline-flex;margin:0 2px;">E</span> de nap dom dom vao den</div>
+
+  <!-- Instructions: bottom-center -->
   <div id="instructions">
-    <b>Điều khiển:</b><br>
-    • <b>W / A / S / D</b> hoặc <b>Phím Mũi Tên</b>: Di chuyển Mây<br>
-    • <b>E</b>: Nạp đom đóm vào Đèn Lồng Lớn (khi đứng gần)<br>
-    • <b>Space (Phím Cách)</b>: Tỏa sáng (Pulse) làm choáng & đẩy lùi Bóng Mực
+    <div class="key-group"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> <span style="margin-left:2px;">Di chuyen</span></div>
+    <div class="sep"></div>
+    <div class="key-group"><span class="key">E</span> Nap den</div>
+    <div class="sep"></div>
+    <div class="key-group"><span class="key">Space</span> Toa sang</div>
   </div>
 
+  <!-- Game Over -->
   <div id="game-over-modal">
-    <div id="game-over-title">CHIẾN THẮNG!</div>
-    <div id="game-over-score">Điểm số: 0</div>
-    <button class="btn-restart" onclick="location.reload()">Chơi lại</button>
+    <div id="game-over-title">CHIEN THANG!</div>
+    <div id="game-over-score">Diem: 0</div>
+    <button class="btn-restart" onclick="location.reload()">Choi Lai</button>
   </div>
 
   <script type="module" src="game.js"></script>
